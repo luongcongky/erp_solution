@@ -6,14 +6,14 @@ const TranslationContext = createContext();
 
 export function TranslationProvider({ children }) {
     const [translations, setTranslations] = useState({});
-    const [locale, setLocale] = useState('vi');
+    // Initialize locale from localStorage immediately (not in useEffect)
+    const [locale, setLocale] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('locale') || 'vi';
+        }
+        return 'vi';
+    });
     const [loading, setLoading] = useState(true);
-
-    // Initialize locale from localStorage
-    useEffect(() => {
-        const savedLocale = localStorage.getItem('locale') || 'vi';
-        setLocale(savedLocale);
-    }, []);
 
     // Fetch translations when locale changes
     useEffect(() => {
