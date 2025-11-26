@@ -1,0 +1,27 @@
+/* Audit Logs Page Specific Styles */
+
+/* User column styling - matches Users screen */
+.userInfo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.userAvatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.userInfo span {
+    color: var(--text-primary);
+    font-weight: 500;
+}

@@ -1,0 +1,215 @@
+/* Menus Page Specific Styles */
+
+.menuIcon {
+    font-size: 1.25rem;
+    margin-right: 8px;
+}
+
+.menuLabel {
+    font-weight: 500;
+}
+
+.menuPath {
+    color: #94A3B8;
+    font-size: 0.75rem;
+    margin-top: 2px;
+}
+
+.menuOrder {
+    color: #94A3B8;
+}
+
+.statusBadge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.statusBadge.active {
+    background: rgba(16, 185, 129, 0.18);
+    color: #A7F3D0;
+}
+
+.statusBadge.inactive {
+    background: rgba(239, 68, 68, 0.18);
+    color: #FECACA;
+}
+
+/* Tree View Styles */
+.parent-row {
+    background: rgba(102, 126, 234, 0.05);
+    font-weight: 600;
+}
+
+.child-row {
+    background: var(--background);
+}
+
+.child-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.toggle-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    margin-right: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+}
+
+.toggle-button:hover {
+    color: var(--primary);
+    transform: scale(1.1);
+}
+
+/* Visual Indicators */
+.menu-item-with-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.menu-item-with-indicator.indented {
+    padding-left: 32px;
+}
+
+.module-indicator {
+    width: 4px;
+    height: 28px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    transition: width 0.2s ease;
+}
+
+.parent-row .module-indicator {
+    width: 6px;
+    height: 32px;
+}
+
+.indent-marker {
+    color: var(--text-secondary);
+    margin-right: 4px;
+    font-size: 14px;
+    opacity: 0.5;
+}
+
+/* Module Badges */
+.module-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    margin-left: auto;
+}
+
+.module-badge-small {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    color: white;
+    margin-top: 4px;
+}
+
+.parent-label {
+    margin-top: 4px;
+}
+
+/* Count badges in dropdown */
+select option {
+    padding: 8px;
+}
+
+/* Animation for expand/collapse */
+.child-row {
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Hover effects */
+.parent-row:hover {
+    background: rgba(102, 126, 234, 0.08);
+}
+
+.parent-row:hover .module-indicator {
+    width: 8px;
+}
+
+/* Action buttons spacing */
+.actionButtons {
+    display: flex;
+    gap: 8px;
+}
+
+.editButton,
+.deleteButton {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.editButton {
+    background: rgba(59, 130, 246, 0.18);
+    color: #93C5FD;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.editButton:hover {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+.deleteButton {
+    background: rgba(239, 68, 68, 0.18);
+    color: #FCA5A5;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.deleteButton:hover {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .menu-item-with-indicator.indented {
+        padding-left: 16px;
+    }
+
+    .module-badge {
+        font-size: 10px;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+    }
+
+    .toggle-button {
+        padding: 2px 4px;
+        font-size: 10px;
+    }
+}

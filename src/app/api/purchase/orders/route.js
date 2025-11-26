@@ -1,0 +1,140 @@
+import { NextResponse } from 'next/server';
+import models from '@/models/sequelize/index.js';
+import { handleList, handleCreate, generateSequenceNumber } from '@/lib/apiHelpers.js';
+
+const { PurchaseOrder, PurchaseOrderLine } = models;
+
+/**
+ * @swagger
+ * /api/purchase/orders:
+ *   get:
+ *     tags:
+ *       - Purchase
+ *     summary: Get all purchase orders
+ *     description: Retrieve a list of purchase orders with optional filtering
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [draft, rfq, rfq_sent, to_approve, purchase, done, cancelled]
+ *         description: Filter by order status
+ *       - in: query
+ *         name: supplier_id
+ *         schema:
+ *           type: string
+ *         description: Filter by supplier
+ *     responses:
+ *       200:
+ *         description: List of purchase orders retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/PurchaseOrder'
+ *       500:
+ *         description: Server error
+ *   post:
+ *     tags:
+ *       - Purchase
+ *     summary: Create a new purchase order
+ *     description: Create a new purchase order with optional lines
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - supplier_id
+ *               - order_date
+ *             properties:
+ *               supplier_id:
+ *                 type: string
+ *               order_date:
+ *                 type: string
+ *                 format: date
+ *               status:
+ *                 type: string
+ *                 enum: [draft, rfq, rfq_sent, to_approve, purchase, done, cancelled]
+ *               lines:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - product_id
+ *                     - qty
+ *                     - unit_price
+ *                   properties:
+ *                     product_id:
+ *                       type: string
+ *                     qty:
+ *                       type: number
+ *                     unit_price:
+ *                       type: number
+ *                     tax_rate:
+ *                       type: number
+ *     responses:
+ *       201:
+ *         description: Purchase order created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/PurchaseOrder'
+ *       500:
+ *         description: Server error
+ */
+export async function GET(request) {
+    return handleList(PurchaseOrder, request, {
+        filters: ['status', 'supplier_id'],
+        include: [
+            { model: models.Partner, as: 'supplier' },
+            { model: PurchaseOrderLine, as: 'PurchaseOrderLines' }
+        ],
+        order: [['order_date', 'DESC']]
+    });
+}
+
+// POST /api/purchase/orders
+export async function POST(request) {
+    return handleCreate(PurchaseOrder, request, {
+        transform: async (data) => {
+            if (!data.name) {
+                data.name = await generateSequenceNumber(
+                    PurchaseOrder,
+                    'PO',
+                    data.ten_id,
+                    data.stg_id
+                );
+            }
+            return data;
+        },
+        afterCreate: async (order, body) => {
+            if (body.lines && body.lines.length > 0) {
+                const lines = body.lines.map(line => ({
+                    ...line,
+                    purchase_id: order.id
+                }));
+                await PurchaseOrderLine.bulkCreate(lines);
+
+                const total = body.lines.reduce((sum, line) => {
+                    return sum + (line.qty * line.unit_price * (1 + line.tax_rate / 100));
+                }, 0);
+                await order.update({ total_amount: total });
+            }
+        }
+    });
+}

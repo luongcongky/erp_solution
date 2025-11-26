@@ -1,0 +1,22 @@
+/* Roles Page Specific Styles */
+
+.roleNameCell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.roleDescription {
+    color: #94A3B8;
+}
+
+.usersCount {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.usersCountNumber {
+    color: #E2E8F0;
+    font-weight: 500;
+}

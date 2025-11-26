@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Export Excel - File System Access API</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .test-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .test-section h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        .test-section p {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+
+        .api-support {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .api-support.supported {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+
+        .test-results {
+            margin-top: 20px;
+        }
+
+        .test-result-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .test-result-item.pass {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .test-result-item.fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .progress-bar.active {
+            display: block;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Export Excel Functionality</h1>
+        <p class="subtitle">Kiểm tra tính năng chọn nơi lưu file với File System Access API</p>
+
+        <!-- API Support Check -->
+        <div id="apiSupport" class="api-support">
+            <strong>Đang kiểm tra hỗ trợ API...</strong>
+        </div>
+
+        <!-- Test 1: File System Access API -->
+        <div class="test-section">
+            <h2>✅ Test 1: Chọn nơi lưu file</h2>
+            <p>Kiểm tra xem bạn có thể chọn nơi lưu file Excel hay không.</p>
+            <button onclick="testFileSaveLocation()">Chạy Test 1</button>
+            <div id="test1Status" class="status"></div>
+            <div class="progress-bar" id="progress1">
+                <div class="progress-fill" id="progressFill1"></div>
+            </div>
+        </div>
+
+        <!-- Test 2: User Cancellation -->
+        <div class="test-section">
+            <h2>❌ Test 2: Hủy chọn file</h2>
+            <p>Kiểm tra xử lý khi người dùng hủy dialog chọn file.</p>
+            <button onclick="testUserCancellation()">Chạy Test 2 (Nhấn Cancel khi dialog xuất hiện)</button>
+            <div id="test2Status" class="status"></div>
+        </div>
+
+        <!-- Test 3: Export with Data -->
+        <div class="test-section">
+            <h2>📊 Test 3: Xuất dữ liệu mẫu</h2>
+            <p>Xuất file Excel với dữ liệu audit log mẫu.</p>
+            <button onclick="testExportWithData()">Chạy Test 3</button>
+            <div id="test3Status" class="status"></div>
+            <div class="progress-bar" id="progress3">
+                <div class="progress-fill" id="progressFill3"></div>
+            </div>
+        </div>
+
+        <!-- Test 4: Fallback Test -->
+        <div class="test-section">
+            <h2>💾 Test 4: Fallback Download</h2>
+            <p>Kiểm tra download thông thường (không chọn nơi lưu).</p>
+            <button onclick="testFallbackDownload()">Chạy Test 4</button>
+            <div id="test4Status" class="status"></div>
+        </div>
+
+        <!-- Test Results Summary -->
+        <div class="test-results" id="testResults" style="display: none;">
+            <h2>📋 Kết quả Tests</h2>
+            <div id="resultsList"></div>
+        </div>
+    </div>
+
+    <script>
+        const testResults = [];
+
+        // Check API Support
+        window.addEventListener('load', () => {
+            const apiSupport = document.getElementById('apiSupport');
+            const hasAPI = 'showSaveFilePicker' in window;
+            
+            if (hasAPI) {
+                apiSupport.className = 'api-support supported';
+                apiSupport.innerHTML = '<strong>✅ File System Access API được hỗ trợ!</strong><br>Trình duyệt của bạn hỗ trợ chọn nơi lưu file.';
+                addTestResult('API Support Check', true, 'File System Access API available');
+            } else {
+                apiSupport.innerHTML = '<strong>⚠️ File System Access API không được hỗ trợ</strong><br>Trình duyệt của bạn sẽ sử dụng download thông thường. Thử Chrome/Edge 86+ để test đầy đủ.';
+                addTestResult('API Support Check', false, 'File System Access API not available - will use fallback');
+            }
+        });
+
+        // Test 1: File Save Location
+        async function testFileSaveLocation() {
+            const status = document.getElementById('test1Status');
+            const progress = document.getElementById('progress1');
+            const progressFill = document.getElementById('progressFill1');
+            
+            status.className = 'status info';
+            status.textContent = '🔄 Đang mở dialog chọn nơi lưu...';
+            progress.classList.add('active');
+            progressFill.style.width = '30%';
+
+            if (!('showSaveFilePicker' in window)) {
+                status.className = 'status error';
+                status.textContent = '❌ File System Access API không được hỗ trợ trên trình duyệt này.';
+                addTestResult('Test 1: File Save Location', false, 'API not supported');
+                progress.classList.remove('active');
+                return;
+            }
+
+            try {
+                const fileHandle = await window.showSaveFilePicker({
+                    suggestedName: 'test_audit_logs.xlsx',
+                    types: [{
+                        description: 'Excel Files',
+                        accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] }
+                    }]
+                });
+
+                progressFill.style.width = '70%';
+                status.className = 'status success';
+                status.textContent = `✅ Thành công! File sẽ được lưu tại: ${fileHandle.name}`;
+                
+                // Create simple Excel file
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet([{ Test: 'Success', Location: fileHandle.name }]);
+                XLSX.utils.book_append_sheet(wb, ws, 'Test');
+                
+                const writable = await fileHandle.createWritable();
+                const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                await writable.write(buffer);
+                await writable.close();
+
+                progressFill.style.width = '100%';
+                setTimeout(() => {
+                    status.textContent = `✅ File đã được lưu thành công tại vị trí bạn chọn!`;
+                    addTestResult('Test 1: File Save Location', true, `File saved to ${fileHandle.name}`);
+                    progress.classList.remove('active');
+                }, 500);
+
+            } catch (err) {
+                progress.classList.remove('active');
+                if (err.name === 'AbortError') {
+                    status.className = 'status info';
+                    status.textContent = 'ℹ️ Bạn đã hủy chọn file.';
+                    addTestResult('Test 1: File Save Location', true, 'User cancelled (expected behavior)');
+                } else {
+                    status.className = 'status error';
+                    status.textContent = `❌ Lỗi: ${err.message}`;
+                    addTestResult('Test 1: File Save Location', false, err.message);
+                }
+            }
+        }
+
+        // Test 2: User Cancellation
+        async function testUserCancellation() {
+            const status = document.getElementById('test2Status');
+            status.className = 'status info';
+            status.textContent = '🔄 Mở dialog... Hãy nhấn Cancel để test!';
+
+            if (!('showSaveFilePicker' in window)) {
+                status.className = 'status error';
+                status.textContent = '❌ File System Access API không được hỗ trợ.';
+                addTestResult('Test 2: User Cancellation', false, 'API not supported');
+                return;
+            }
+
+            try {
+                await window.showSaveFilePicker({
+                    suggestedName: 'cancelled_test.xlsx',
+                    types: [{
+                        description: 'Excel Files',
+                        accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] }
+                    }]
+                });
+                status.className = 'status info';
+                status.textContent = 'ℹ️ Bạn đã chọn file. Để test cancellation, hãy chạy lại và nhấn Cancel.';
+                addTestResult('Test 2: User Cancellation', true, 'File selected (run again and cancel to test)');
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    status.className = 'status success';
+                    status.textContent = '✅ Test thành công! Ứng dụng xử lý cancellation đúng cách.';
+                    addTestResult('Test 2: User Cancellation', true, 'Cancellation handled correctly');
+                } else {
+                    status.className = 'status error';
+                    status.textContent = `❌ Lỗi không mong đợi: ${err.message}`;
+                    addTestResult('Test 2: User Cancellation', false, err.message);
+                }
+            }
+        }
+
+        // Test 3: Export with Sample Data
+        async function testExportWithData() {
+            const status = document.getElementById('test3Status');
+            const progress = document.getElementById('progress3');
+            const progressFill = document.getElementById('progressFill3');
+            
+            status.className = 'status info';
+            status.textContent = '🔄 Đang chuẩn bị dữ liệu...';
+            progress.classList.add('active');
+            progressFill.style.width = '10%';
+
+            // Sample audit log data
+            const sampleData = [
+                { 'Thời gian': '2025-11-25 21:00:00', 'Người dùng': 'Admin', 'Hành động': 'CREATE', 'Tài nguyên': 'User', 'Địa chỉ IP': '192.168.1.1', 'Chi tiết': 'Created new user account' },
+                { 'Thời gian': '2025-11-25 21:05:00', 'Người dùng': 'User1', 'Hành động': 'UPDATE', 'Tài nguyên': 'Profile', 'Địa chỉ IP': '192.168.1.2', 'Chi tiết': 'Updated profile information' },
+                { 'Thời gian': '2025-11-25 21:10:00', 'Người dùng': 'Admin', 'Hành động': 'DELETE', 'Tài nguyên': 'Document', 'Địa chỉ IP': '192.168.1.1', 'Chi tiết': 'Deleted old document' },
+                { 'Thời gian': '2025-11-25 21:15:00', 'Người dùng': 'User2', 'Hành động': 'LOGIN', 'Tài nguyên': 'System', 'Địa chỉ IP': '192.168.1.3', 'Chi tiết': 'User logged in' },
+                { 'Thời gian': '2025-11-25 21:20:00', 'Người dùng': 'User1', 'Hành động': 'CREATE', 'Tài nguyên': 'Report', 'Địa chỉ IP': '192.168.1.2', 'Chi tiết': 'Generated monthly report' },
+            ];
+
+            progressFill.style.width = '30%';
+
+            if ('showSaveFilePicker' in window) {
+                try {
+                    const fileHandle = await window.showSaveFilePicker({
+                        suggestedName: 'audit_logs_sample.xlsx',
+                        types: [{
+                            description: 'Excel Files',
+                            accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] }
+                        }]
+                    });
+
+                    progressFill.style.width = '60%';
+                    status.textContent = '🔄 Đang tạo file Excel...';
+
+                    // Create Excel with styling
+                    const ws = XLSX.utils.json_to_sheet(sampleData);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Audit Logs');
+
+                    // Set column widths
+                    ws['!cols'] = [
+                        { wch: 20 }, { wch: 25 }, { wch: 12 },
+                        { wch: 15 }, { wch: 18 }, { wch: 50 }
+                    ];
+
+                    progressFill.style.width = '80%';
+                    status.textContent = '🔄 Đang lưu file...';
+
+                    const writable = await fileHandle.createWritable();
+                    const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                    await writable.write(buffer);
+                    await writable.close();
+
+                    progressFill.style.width = '100%';
+                    status.className = 'status success';
+                    status.textContent = `✅ Xuất thành công! Đã xuất ${sampleData.length} bản ghi vào ${fileHandle.name}`;
+                    addTestResult('Test 3: Export with Data', true, `Exported ${sampleData.length} records`);
+                    
+                    setTimeout(() => progress.classList.remove('active'), 1000);
+
+                } catch (err) {
+                    progress.classList.remove('active');
+                    if (err.name === 'AbortError') {
+                        status.className = 'status info';
+                        status.textContent = 'ℹ️ Đã hủy xuất file.';
+                        addTestResult('Test 3: Export with Data', true, 'User cancelled');
+                    } else {
+                        status.className = 'status error';
+                        status.textContent = `❌ Lỗi: ${err.message}`;
+                        addTestResult('Test 3: Export with Data', false, err.message);
+                    }
+                }
+            } else {
+                // Fallback
+                const ws = XLSX.utils.json_to_sheet(sampleData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Audit Logs');
+                XLSX.writeFile(wb, 'audit_logs_sample.xlsx');
+                
+                progress.classList.remove('active');
+                status.className = 'status success';
+                status.textContent = `✅ File đã được download vào thư mục Downloads (${sampleData.length} bản ghi)`;
+                addTestResult('Test 3: Export with Data', true, `Fallback download - ${sampleData.length} records`);
+            }
+        }
+
+        // Test 4: Fallback Download
+        function testFallbackDownload() {
+            const status = document.getElementById('test4Status');
+            status.className = 'status info';
+            status.textContent = '🔄 Đang tạo file...';
+
+            const sampleData = [
+                { Test: 'Fallback', Method: 'XLSX.writeFile', Status: 'Success' }
+            ];
+
+            const ws = XLSX.utils.json_to_sheet(sampleData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Fallback Test');
+            XLSX.writeFile(wb, 'fallback_test.xlsx');
+
+            status.className = 'status success';
+            status.textContent = '✅ File đã được download vào thư mục Downloads mặc định.';
+            addTestResult('Test 4: Fallback Download', true, 'Standard download successful');
+        }
+
+        // Add test result
+        function addTestResult(testName, passed, details) {
+            testResults.push({ testName, passed, details });
+            updateTestResults();
+        }
+
+        // Update test results display
+        function updateTestResults() {
+            const resultsDiv = document.getElementById('testResults');
+            const resultsList = document.getElementById('resultsList');
+            
+            if (testResults.length > 0) {
+                resultsDiv.style.display = 'block';
+                resultsList.innerHTML = testResults.map(result => `
+                    <div class="test-result-item ${result.passed ? 'pass' : 'fail'}">
+                        ${result.passed ? '✅' : '❌'} <strong>${result.testName}</strong>: ${result.details}
+                    </div>
+                `).join('');
+            }
+        }
+    </script>
+</body>
+</html>

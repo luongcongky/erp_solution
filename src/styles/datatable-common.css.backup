@@ -1,0 +1,296 @@
+/* DataTable Common Styles - Shared across all pages with DataTables */
+
+/* ========================================
+   TABLE CONTAINER & STRUCTURE
+   ======================================== */
+
+.tableContainer {
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid #1E293B;
+    border-radius: 12px;
+    background: #0F172A;
+    box-shadow: none;
+}
+
+.dataTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tableHeader {
+    background: #1E293B;
+    border-bottom: 1px solid #2C3A4E;
+}
+
+.tableHeaderCell {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #E2E8F0;
+    cursor: pointer;
+    user-select: none;
+}
+
+.tableHeaderCell.noSort {
+    cursor: default;
+}
+
+.tableHeaderContent {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ========================================
+   TABLE ROWS
+   ======================================== */
+
+.tableRow {
+    border-bottom: 1px solid #1F2937;
+    transition: background 0.15s ease;
+}
+
+.tableRow.even {
+    background: #0F172A;
+}
+
+.tableRow.odd {
+    background: #111C2E;
+}
+
+.tableRow.selected {
+    background: rgba(37, 99, 235, 0.1);
+}
+
+.tableRow:hover {
+    background: #1A2238 !important;
+}
+
+.tableCell {
+    padding: 12px 16px;
+    font-size: 0.875rem;
+    color: #E2E8F0;
+}
+
+.tableCell.secondary {
+    color: #94A3B8;
+}
+
+/* ========================================
+   ACTION BUTTONS
+   ======================================== */
+
+.actionButtons {
+    display: flex;
+    gap: 8px;
+}
+
+.editButton {
+    font-size: 0.75rem;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid #334155;
+    color: #CBD5E1;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.editButton:hover {
+    background: #1E293B;
+    border-color: #475569;
+}
+
+.deleteButton {
+    font-size: 0.75rem;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid #EF4444;
+    color: #EF4444;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.deleteButton:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* ========================================
+   ROLE BADGES
+   ======================================== */
+
+.roleBadge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.roleBadge.admin {
+    background: rgba(37, 99, 235, 0.15);
+    color: #60A5FA;
+}
+
+.roleBadge.user {
+    background: rgba(148, 163, 184, 0.15);
+    color: #CBD5E1;
+}
+
+/* ========================================
+   PAGINATION
+   ======================================== */
+
+.paginationContainer {
+    padding: 12px 16px;
+    border-top: 1px solid #1E293B;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1E293B;
+}
+
+.paginationInfo {
+    font-size: 0.875rem;
+    color: #94A3B8;
+}
+
+.paginationControls {
+    display: flex;
+    gap: 8px;
+}
+
+.paginationButton {
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid #334155;
+    color: #E2E8F0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.paginationButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.3;
+}
+
+.paginationButton:not(:disabled):hover {
+    background: #1A2238;
+}
+
+.paginationNumbers {
+    display: flex;
+    gap: 4px;
+}
+
+.pageNumber {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    background: transparent;
+    color: #64748B;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 400;
+    transition: all 0.2s;
+}
+
+.pageNumber.active {
+    border: none;
+    background: #2563EB;
+    color: #FFFFFF;
+    font-weight: 600;
+}
+
+.pageNumber:not(.active):hover {
+    background: #1A2238;
+}
+
+/* ========================================
+   AVATAR
+   ======================================== */
+
+.avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #2563EB;
+    color: #FFFFFF;
+    border: 1px solid #334155;
+    font-size: 0.875rem;
+    outline: none;
+    background: #0F172A;
+    color: #E2E8F0;
+    transition: border-color 0.2s;
+}
+
+.searchInput:focus {
+    border-color: #2563EB;
+}
+
+.searchInput::placeholder {
+    color: #64748B;
+}
+
+.searchIcon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748B;
+    pointer-events: none;
+    font-size: 1rem;
+}
+
+.filterSelect {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    font-size: 0.875rem;
+    outline: none;
+    background: #0F172A;
+    color: #E2E8F0;
+    min-width: 160px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filterSelect:hover {
+    border-color: #475569;
+}
+
+.filterSelect:focus {
+    border-color: #2563EB;
+}
+
+.clearFiltersBtn {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    background: transparent;
+    color: #94A3B8;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.clearFiltersBtn:hover {
+    background: #1E293B;
+    border-color: #475569;
+    color: #E2E8F0;
+}
+
+.filterCount {
+    padding: 4px 10px;
+    border-radius: 12px;
+    background: rgba(37, 99, 235, 0.15);
+    color: #60A5FA;
+    font-size: 0.75rem;
+    font-weight: 600;
+}

@@ -1,0 +1,84 @@
+/* Users Page Specific Styles */
+
+.checkboxCell {
+    padding: 12px 16px;
+    width: 40px;
+}
+
+.userNameCell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.userName {
+    font-weight: 500;
+    color: #E2E8F0;
+}
+
+.userEmail {
+    color: #94A3B8;
+}
+
+.statusPill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.statusDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.statusDot.active {
+    background: #22C55E;
+}
+
+.statusDot.inactive {
+    background: #EF4444;
+}
+
+.statusText {
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 9999px;
+}
+
+.statusText.active {
+    background-color: rgba(16, 185, 129, 0.18);
+    color: #A7F3D0;
+}
+
+.statusText.inactive {
+    background-color: rgba(239, 68, 68, 0.18);
+    color: #FECACA;
+}
+
+.lastLogin {
+    color: #94A3B8;
+}
+
+.filterInput {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    font-size: 0.875rem;
+    outline: none;
+    background: #0F172A;
+    color: #E2E8F0;
+}
+
+.filterSelect {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    font-size: 0.875rem;
+    outline: none;
+    background: #0F172A;
+    color: #E2E8F0;
+    min-width: 120px;
+}
