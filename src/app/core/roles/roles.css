@@ -20,3 +20,151 @@
     color: #E2E8F0;
     font-weight: 500;
 }
+
+.usersCount.clickable:hover .usersCountNumber {
+    color: var(--primary);
+    text-decoration: underline;
+}
+
+/* Modal Styles */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.modalContent {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xl);
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    animation: modalSlideIn 0.2s ease-out;
+}
+
+.modalHeader {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modalHeader h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.modalClose {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    line-height: 1;
+}
+
+.modalClose:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+}
+
+.modalBody {
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.modalFooter {
+    padding: 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.userListModal {
+    max-width: 600px;
+    width: 100%;
+}
+
+.userList {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.userListTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.userListTable th,
+.userListTable td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.userListTable th {
+    background: var(--surface-light);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.875rem;
+    position: sticky;
+    top: 0;
+}
+
+.userListTable td {
+    color: var(--text-primary);
+}
+
+.userInfo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.userAvatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.loadingState,
+.emptyState {
+    padding: 40px;
+    text-align: center;
+    color: var(--text-secondary);
+}

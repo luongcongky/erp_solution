@@ -82,3 +82,33 @@
     color: #E2E8F0;
     min-width: 120px;
 }
+
+/* Role Badge Styles */
+.roleBadge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.roleBadge.no-role {
+    background-color: rgba(148, 163, 184, 0.18);
+    color: #CBD5E1;
+    border: 1px solid #475569;
+}
+
+.roleBadge.admin {
+    background-color: rgba(139, 92, 246, 0.18);
+    color: #C4B5FD;
+}
+
+.roleBadge.user {
+    background-color: rgba(59, 130, 246, 0.18);
+    color: #BFDBFE;
+}
+
+.roleBadge.manager {
+    background-color: rgba(16, 185, 129, 0.18);
+    color: #A7F3D0;
+}

@@ -36,17 +36,20 @@ export default function UsersPage() {
     }, [users, filters]);
 
     const fetchUsers = async () => {
-        setTimeout(() => {
-            const mockUsers = [
-                { id: '1', name: 'Admin User', email: 'admin@gmail.com', role: 'Admin', status: 'active', lastLogin: '2024-02-20 10:30' },
-                { id: '2', name: 'Sales Manager', email: 'sales@test.com', role: 'User', status: 'active', lastLogin: '2024-02-19 14:20' },
-                { id: '3', name: 'John Doe', email: 'john@example.com', role: 'User', status: 'inactive', lastLogin: '2024-01-15 09:00' },
-                { id: '4', name: 'Jane Smith', email: 'jane@example.com', role: 'Admin', status: 'active', lastLogin: '2024-02-21 08:45' },
-                { id: '5', name: 'Bob Johnson', email: 'bob@example.com', role: 'User', status: 'active', lastLogin: '2024-02-18 16:15' },
-            ];
-            setUsers(mockUsers);
+        try {
+            const response = await fetch('/api/users');
+            const result = await response.json();
+
+            if (result.success) {
+                setUsers(result.data);
+            } else {
+                console.error('Error fetching users:', result.error);
+            }
+        } catch (error) {
+            console.error('Error fetching users:', error);
+        } finally {
             setLoadingData(false);
-        }, 500);
+        }
     };
 
     const filterData = () => {
@@ -306,7 +309,7 @@ export default function UsersPage() {
                                         {user.email}
                                     </td>
                                     <td className="tableCell">
-                                        <span className={`roleBadge ${user.role.toLowerCase()}`}>
+                                        <span className={`roleBadge ${user.role.toLowerCase().replace(/\s+/g, '-')}`}>
                                             {user.role}
                                         </span>
                                     </td>
