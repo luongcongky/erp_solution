@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import models, { sequelize, setupAssociations } from '@/models/sequelize/index.js';
 
-// Force Rebuild 123
+// Force Rebuild 1234
 // Ensure associations are set up
 setupAssociations();
 
@@ -128,6 +128,7 @@ export async function GET(request) {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function POST(request) {
+    console.log('[API] POST /api/roles started');
     try {
         const body = await request.json();
         const { name, description, ten_id = '1000', stg_id = 'DEV', permissions = [] } = body;

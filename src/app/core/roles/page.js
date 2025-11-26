@@ -18,13 +18,19 @@ export default function RolesPage() {
     const [pageSize] = useState(appConfig.pagination.defaultPageSize);
     const [filters, setFilters] = useState({
         userCount: 'all',
-        type: 'all'
+        type: 'all',
+        search: ''
     });
     const [showUserModal, setShowUserModal] = useState(false);
     const [selectedRoleUsers, setSelectedRoleUsers] = useState([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
     const [selectedRoleName, setSelectedRoleName] = useState('');
     const [selectedRoleId, setSelectedRoleId] = useState(null);
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [editingRole, setEditingRole] = useState(null);
+    const [formData, setFormData] = useState({ name: '', description: '' });
+    const [formErrors, setFormErrors] = useState({});
+    const [submitting, setSubmitting] = useState(false);
     const { t, loading: loadingTranslations } = useTranslations();
     const { trackEvent } = useEventTracking();
     const MODULE_NAME = 'ROLES';
@@ -101,6 +107,104 @@ export default function RolesPage() {
             }
         } catch (error) {
             console.error('Error removing user from role:', error);
+        }
+    };
+
+    const handleAddRole = () => {
+        setEditingRole(null);
+        setShowAddModal(true);
+        setFormData({ name: '', description: '' });
+        setFormErrors({});
+    };
+
+    const handleEditRole = (role) => {
+        setEditingRole(role);
+        setFormData({ name: role.name, description: role.description || '' });
+        setFormErrors({});
+        setShowAddModal(true);
+    };
+
+    const validateForm = () => {
+        const errors = {};
+        if (!formData.name || formData.name.trim() === '') {
+            errors.name = 'Role name is required';
+        }
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
+    const handleSubmitRole = async (e) => {
+        e.preventDefault();
+
+        if (!validateForm()) return;
+
+        setSubmitting(true);
+        try {
+            const url = editingRole ? `/api/roles/${editingRole.id}` : '/api/roles';
+            const method = editingRole ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Refresh roles list
+                await fetchRoles();
+
+                // Close modal
+                setShowAddModal(false);
+
+                // Track event
+                trackEvent({
+                    action: editingRole ? ACTION_TYPES.UPDATE : ACTION_TYPES.CREATE,
+                    module: MODULE_NAME,
+                    object_id: result.data.id,
+                    object_type: 'Role',
+                    details: editingRole
+                        ? `Updated role: ${formData.name}`
+                        : `Created role: ${formData.name}`
+                });
+            } else {
+                setFormErrors({ submit: result.error || 'Failed to save role' });
+            }
+        } catch (error) {
+            console.error('Error saving role:', error);
+            setFormErrors({ submit: 'An error occurred while saving the role' });
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleDeleteRole = async (role) => {
+        if (!confirm(`Are you sure you want to delete role "${role.name}"?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/roles/${role.id}`, {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                await fetchRoles();
+                trackEvent({
+                    action: ACTION_TYPES.DELETE,
+                    module: MODULE_NAME,
+                    object_id: role.id,
+                    object_type: 'Role',
+                    details: `Deleted role: ${role.name}`
+                });
+            } else {
+                alert(result.error || 'Failed to delete role');
+            }
+        } catch (error) {
+            console.error('Error deleting role:', error);
+            alert('An error occurred while deleting the role');
         }
     };
 
@@ -196,14 +300,7 @@ export default function RolesPage() {
                 actions={
                     <button
                         className="btn btn-primary"
-                        onClick={() => {
-                            trackEvent({
-                                action: ACTION_TYPES.CREATE,
-                                module: MODULE_NAME,
-                                object_type: 'Role',
-                                details: 'Clicked Add Role button'
-                            });
-                        }}
+                        onClick={handleAddRole}
                     >
                         + {t('pages.roles.addRole', 'Add Role')}
                     </button>
@@ -329,30 +426,14 @@ export default function RolesPage() {
                                             <div className="actionButtons">
                                                 <button
                                                     className="editButton"
-                                                    onClick={() => {
-                                                        trackEvent({
-                                                            action: ACTION_TYPES.UPDATE,
-                                                            module: MODULE_NAME,
-                                                            object_id: role.id,
-                                                            object_type: 'Role',
-                                                            details: `Clicked edit for role: ${role.name}`
-                                                        });
-                                                    }}
+                                                    onClick={() => handleEditRole(role)}
                                                 >
                                                     {t('common.edit', 'Edit')}
                                                 </button>
                                                 {!role.isSystem && (
                                                     <button
                                                         className="deleteButton"
-                                                        onClick={() => {
-                                                            trackEvent({
-                                                                action: ACTION_TYPES.DELETE,
-                                                                module: MODULE_NAME,
-                                                                object_id: role.id,
-                                                                object_type: 'Role',
-                                                                details: `Clicked delete for role: ${role.name}`
-                                                            });
-                                                        }}
+                                                        onClick={() => handleDeleteRole(role)}
                                                     >
                                                         {t('common.delete', 'Delete')}
                                                     </button>
@@ -508,6 +589,73 @@ export default function RolesPage() {
                     </div>
                 )
             }
+
+            {/* Add/Edit Role Modal */}
+            {showAddModal && (
+                <div className="modalOverlay" onClick={() => setShowAddModal(false)}>
+                    <div className="modalContent addRoleModal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modalHeader">
+                            <h3>{editingRole ? 'Edit Role' : 'Add New Role'}</h3>
+                            <button className="modalClose" onClick={() => setShowAddModal(false)}>×</button>
+                        </div>
+                        <form onSubmit={handleSubmitRole}>
+                            <div className="modalBody">
+                                {formErrors.submit && (
+                                    <div className="errorMessage">{formErrors.submit}</div>
+                                )}
+
+                                <div className="formGroup">
+                                    <label htmlFor="roleName">
+                                        Role Name <span className="required">*</span>
+                                    </label>
+                                    <input
+                                        id="roleName"
+                                        type="text"
+                                        className={`formInput ${formErrors.name ? 'error' : ''}`}
+                                        value={formData.name}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                                        placeholder="Enter role name (e.g., Manager, Editor)"
+                                        disabled={submitting}
+                                    />
+                                    {formErrors.name && (
+                                        <span className="fieldError">{formErrors.name}</span>
+                                    )}
+                                </div>
+
+                                <div className="formGroup">
+                                    <label htmlFor="roleDescription">Description</label>
+                                    <textarea
+                                        id="roleDescription"
+                                        className="formInput"
+                                        value={formData.description}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                                        placeholder="Enter role description (optional)"
+                                        rows="4"
+                                        disabled={submitting}
+                                    />
+                                </div>
+                            </div>
+                            <div className="modalFooter">
+                                <button
+                                    type="button"
+                                    className="btn secondary"
+                                    onClick={() => setShowAddModal(false)}
+                                    disabled={submitting}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="btn primary"
+                                    disabled={submitting}
+                                >
+                                    {submitting ? 'Saving...' : (editingRole ? 'Save Changes' : 'Create Role')}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </>
     );
 }
