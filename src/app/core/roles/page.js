@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from '@/hooks/useTranslations';
 import { useEventTracking } from '@/hooks/useEventTracking';
 import { ACTION_TYPES } from '@/config/action.config';
+import Modal from '@/components/Modal';
 import appConfig from '@/config/app.config';
 import '@/styles/datatable-common.css';
 import './roles.css';
@@ -512,150 +513,143 @@ export default function RolesPage() {
             </PageTemplate>
 
             {/* Users List Modal */}
-            {
-                showUserModal && (
-                    <div className="modalOverlay" onClick={() => setShowUserModal(false)}>
-                        <div className="modalContent userListModal" onClick={(e) => e.stopPropagation()}>
-                            <div className="modalHeader">
-                                <h3>Users with role: {selectedRoleName}</h3>
-                                <button className="modalClose" onClick={() => setShowUserModal(false)}>×</button>
-                            </div>
-                            <div className="modalBody">
-                                {loadingUsers ? (
-                                    <div className="loadingState">Loading users...</div>
-                                ) : selectedRoleUsers.length === 0 ? (
-                                    <div className="emptyState">No users found with this role.</div>
-                                ) : (
-                                    <div className="userList">
-                                        <table className="userListTable">
-                                            <thead>
-                                                <tr>
-                                                    <th>Name</th>
-                                                    <th>Email</th>
-                                                    <th>Status</th>
-                                                    <th>Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {selectedRoleUsers.map(user => (
-                                                    <tr key={user.id}>
-                                                        <td>
-                                                            <div className="userInfo">
-                                                                <div className="userAvatar">
-                                                                    {(user.firstName || user.email).charAt(0).toUpperCase()}
-                                                                </div>
-                                                                <span>{user.firstName} {user.lastName}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td>{user.email}</td>
-                                                        <td>
-                                                            <span className={`statusBadge ${user.isActive ? 'active' : 'inactive'}`}>
-                                                                {user.isActive ? 'Active' : 'Inactive'}
-                                                            </span>
-                                                        </td>
-                                                        <td>
-                                                            <button
-                                                                className="btn-icon delete"
-                                                                onClick={() => handleRemoveUser(user)}
-                                                                title="Remove from role"
-                                                                style={{
-                                                                    background: 'none',
-                                                                    border: 'none',
-                                                                    cursor: 'pointer',
-                                                                    color: '#ef4444',
-                                                                    padding: '4px',
-                                                                    borderRadius: '4px'
-                                                                }}
-                                                                onMouseEnter={(e) => e.currentTarget.style.background = '#fee2e2'}
-                                                                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                                                            >
-                                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                    <polyline points="3 6 5 6 21 6"></polyline>
-                                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                                                </svg>
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="modalFooter">
-                                <button className="btn secondary" onClick={() => setShowUserModal(false)}>Close</button>
-                            </div>
-                        </div>
+            {/* Users List Modal */}
+            <Modal
+                isOpen={showUserModal}
+                onClose={() => setShowUserModal(false)}
+                title={`Users with role: ${selectedRoleName}`}
+                maxWidth="800px"
+                footer={
+                    <button className="btn secondary" onClick={() => setShowUserModal(false)}>Close</button>
+                }
+            >
+                {loadingUsers ? (
+                    <div className="loadingState">Loading users...</div>
+                ) : selectedRoleUsers.length === 0 ? (
+                    <div className="emptyState">No users found with this role.</div>
+                ) : (
+                    <div className="userList">
+                        <table className="userListTable">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {selectedRoleUsers.map(user => (
+                                    <tr key={user.id}>
+                                        <td>
+                                            <div className="userInfo">
+                                                <div className="userAvatar">
+                                                    {(user.firstName || user.email).charAt(0).toUpperCase()}
+                                                </div>
+                                                <span>{user.firstName} {user.lastName}</span>
+                                            </div>
+                                        </td>
+                                        <td>{user.email}</td>
+                                        <td>
+                                            <span className={`statusBadge ${user.isActive ? 'active' : 'inactive'}`}>
+                                                {user.isActive ? 'Active' : 'Inactive'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button
+                                                className="btn-icon delete"
+                                                onClick={() => handleRemoveUser(user)}
+                                                title="Remove from role"
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    color: '#ef4444',
+                                                    padding: '4px',
+                                                    borderRadius: '4px'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = '#fee2e2'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                </svg>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
-                )
-            }
+                )}
+            </Modal>
 
             {/* Add/Edit Role Modal */}
-            {showAddModal && (
-                <div className="modalOverlay" onClick={() => setShowAddModal(false)}>
-                    <div className="modalContent addRoleModal" onClick={(e) => e.stopPropagation()}>
-                        <div className="modalHeader">
-                            <h3>{editingRole ? 'Edit Role' : 'Add New Role'}</h3>
-                            <button className="modalClose" onClick={() => setShowAddModal(false)}>×</button>
-                        </div>
-                        <form onSubmit={handleSubmitRole}>
-                            <div className="modalBody">
-                                {formErrors.submit && (
-                                    <div className="errorMessage">{formErrors.submit}</div>
-                                )}
+            {/* Add/Edit Role Modal */}
+            <Modal
+                isOpen={showAddModal}
+                onClose={() => setShowAddModal(false)}
+                title={editingRole ? 'Edit Role' : 'Add New Role'}
+                maxWidth="500px"
+                footer={
+                    <>
+                        <button
+                            type="button"
+                            className="btn secondary"
+                            onClick={() => setShowAddModal(false)}
+                            disabled={submitting}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="btn primary"
+                            disabled={submitting}
+                            onClick={handleSubmitRole}
+                        >
+                            {submitting ? 'Saving...' : (editingRole ? 'Save Changes' : 'Create Role')}
+                        </button>
+                    </>
+                }
+            >
+                <form onSubmit={handleSubmitRole}>
+                    {formErrors.submit && (
+                        <div className="errorMessage">{formErrors.submit}</div>
+                    )}
 
-                                <div className="formGroup">
-                                    <label htmlFor="roleName">
-                                        Role Name <span className="required">*</span>
-                                    </label>
-                                    <input
-                                        id="roleName"
-                                        type="text"
-                                        className={`formInput ${formErrors.name ? 'error' : ''}`}
-                                        value={formData.name}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                                        placeholder="Enter role name (e.g., Manager, Editor)"
-                                        disabled={submitting}
-                                    />
-                                    {formErrors.name && (
-                                        <span className="fieldError">{formErrors.name}</span>
-                                    )}
-                                </div>
-
-                                <div className="formGroup">
-                                    <label htmlFor="roleDescription">Description</label>
-                                    <textarea
-                                        id="roleDescription"
-                                        className="formInput"
-                                        value={formData.description}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                                        placeholder="Enter role description (optional)"
-                                        rows="4"
-                                        disabled={submitting}
-                                    />
-                                </div>
-                            </div>
-                            <div className="modalFooter">
-                                <button
-                                    type="button"
-                                    className="btn secondary"
-                                    onClick={() => setShowAddModal(false)}
-                                    disabled={submitting}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="btn primary"
-                                    disabled={submitting}
-                                >
-                                    {submitting ? 'Saving...' : (editingRole ? 'Save Changes' : 'Create Role')}
-                                </button>
-                            </div>
-                        </form>
+                    <div className="formGroup">
+                        <label htmlFor="roleName">
+                            Role Name <span className="required">*</span>
+                        </label>
+                        <input
+                            id="roleName"
+                            type="text"
+                            className={`formInput ${formErrors.name ? 'error' : ''}`}
+                            value={formData.name}
+                            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="Enter role name (e.g., Manager, Editor)"
+                            disabled={submitting}
+                        />
+                        {formErrors.name && (
+                            <span className="fieldError">{formErrors.name}</span>
+                        )}
                     </div>
-                </div>
-            )}
+
+                    <div className="formGroup">
+                        <label htmlFor="roleDescription">Description</label>
+                        <textarea
+                            id="roleDescription"
+                            className="formInput"
+                            value={formData.description}
+                            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                            placeholder="Enter role description (optional)"
+                            rows="4"
+                            disabled={submitting}
+                        />
+                    </div>
+                </form>
+            </Modal>
         </>
     );
 }

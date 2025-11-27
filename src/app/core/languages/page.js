@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from '@/hooks/useTranslations';
 import { useEventTracking } from '@/hooks/useEventTracking';
 import { ACTION_TYPES } from '@/config/action.config';
+import Modal from '@/components/Modal';
 import appConfig from '@/config/app.config';
 import '@/styles/datatable-common.css';
 import './languages.css';
@@ -31,6 +32,13 @@ export default function LanguagesPage() {
         en: '',
         ko: ''
     });
+    const [submitting, setSubmitting] = useState(false);
+
+    const languages = [
+        { code: 'vi', name: 'Vietnamese', flag: '🇻🇳' },
+        { code: 'en', name: 'English', flag: '🇺🇸' },
+        { code: 'ko', name: 'Korean', flag: '🇰🇷' }
+    ];
     const { t, loading: loadingTranslations } = useTranslations();
     const { trackEvent } = useEventTracking();
     const MODULE_NAME = 'LANGUAGES';
@@ -141,6 +149,7 @@ export default function LanguagesPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setSubmitting(true);
 
         const payload = {
             key: formData.key,
@@ -172,6 +181,8 @@ export default function LanguagesPage() {
         } catch (err) {
             console.error('Error saving translation:', err);
             alert('Failed to save translation');
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -257,6 +268,7 @@ export default function LanguagesPage() {
                     </div>
                 }
             >
+
                 {error && (
                     <div style={{ padding: '20px', background: '#fee', color: '#c00', borderRadius: '8px', marginBottom: '20px' }}>
                         {error}
@@ -401,99 +413,94 @@ export default function LanguagesPage() {
             </PageTemplate>
 
             {/* Add/Edit Modal */}
-            {showModal && (
-                <div className="modalOverlay" onClick={() => setShowModal(false)}>
-                    <div className="modalContent" onClick={(e) => e.stopPropagation()}>
-                        <div className="modalHeader">
-                            <h3>{editingKey ? 'Edit Translation' : 'Add New Translation'}</h3>
-                            <button className="modalClose" onClick={() => setShowModal(false)}>×</button>
-                        </div>
-                        <form onSubmit={handleSubmit}>
-                            <div className="modalBody">
-                                <div className="formGroup">
-                                    <label>Translation Key *</label>
-                                    <input
-                                        type="text"
-                                        className="input"
-                                        value={formData.key}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, key: e.target.value }))}
-                                        placeholder="e.g., pages.users.title"
-                                        required
-                                        disabled={!!editingKey}
-                                    />
-                                </div>
-
-                                <div className="formGroup">
-                                    <label>Module</label>
-                                    <select
-                                        className="input"
-                                        value={formData.module}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, module: e.target.value }))}
-                                    >
-                                        <option value="core">Core</option>
-                                        <option value="sales">Sales</option>
-                                        <option value="inventory">Inventory</option>
-                                        <option value="finance">Finance</option>
-                                        <option value="hr">HR</option>
-                                    </select>
-                                </div>
-
-                                <div className="formGroup">
-                                    <label>Description</label>
-                                    <textarea
-                                        className="input"
-                                        value={formData.description}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                                        placeholder="Description for translators"
-                                        rows="2"
-                                    />
-                                </div>
-
-                                <div className="formGroup">
-                                    <label>Vietnamese (VI) *</label>
-                                    <input
-                                        type="text"
-                                        className="input"
-                                        value={formData.vi}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, vi: e.target.value }))}
-                                        required
-                                    />
-                                </div>
-
-                                <div className="formGroup">
-                                    <label>English (EN) *</label>
-                                    <input
-                                        type="text"
-                                        className="input"
-                                        value={formData.en}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, en: e.target.value }))}
-                                        required
-                                    />
-                                </div>
-
-                                <div className="formGroup">
-                                    <label>Korean (KO) *</label>
-                                    <input
-                                        type="text"
-                                        className="input"
-                                        value={formData.ko}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, ko: e.target.value }))}
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            <div className="modalFooter">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
-                                    Cancel
-                                </button>
-                                <button type="submit" className="btn btn-primary">
-                                    {editingKey ? 'Update' : 'Create'}
-                                </button>
-                            </div>
-                        </form>
+            <Modal
+                isOpen={showModal}
+                onClose={() => setShowModal(false)}
+                title={editingKey ? 'Edit Translation' : 'Add New Translation'}
+                maxWidth="800px"
+                footer={
+                    <>
+                        <button
+                            type="button"
+                            className="btn secondary"
+                            onClick={() => setShowModal(false)}
+                            disabled={submitting}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="btn primary"
+                            disabled={submitting}
+                            onClick={handleSubmit}
+                        >
+                            {submitting ? 'Saving...' : (editingKey ? 'Save Changes' : 'Create Translation')}
+                        </button>
+                    </>
+                }
+            >
+                <form onSubmit={handleSubmit}>
+                    <div className="formGroup">
+                        <label>Translation Key *</label>
+                        <input
+                            type="text"
+                            className="input"
+                            value={formData.key}
+                            onChange={(e) => setFormData(prev => ({ ...prev, key: e.target.value }))}
+                            placeholder="e.g., pages.users.title"
+                            required
+                            disabled={!!editingKey}
+                        />
                     </div>
-                </div>
-            )}
+
+                    <div className="formGroup">
+                        <label>Module</label>
+                        <select
+                            className="input"
+                            value={formData.module}
+                            onChange={(e) => setFormData(prev => ({ ...prev, module: e.target.value }))}
+                        >
+                            <option value="core">Core</option>
+                            <option value="sales">Sales</option>
+                            <option value="inventory">Inventory</option>
+                            <option value="finance">Finance</option>
+                            <option value="hr">HR</option>
+                        </select>
+                    </div>
+
+                    <div className="formGroup">
+                        <label>Description</label>
+                        <textarea
+                            className="input"
+                            value={formData.description}
+                            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                            placeholder="Description for translators"
+                            rows="2"
+                        />
+                    </div>
+
+                    <div className="translationsGrid">
+                        {languages.map(lang => (
+                            <div key={lang.code} className="formGroup">
+                                <label className="langLabel">
+                                    <span className="langFlag">{lang.flag}</span>
+                                    {lang.name}
+                                </label>
+                                <textarea
+                                    className="input"
+                                    value={formData[lang.code] || ''}
+                                    onChange={(e) => setFormData(prev => ({
+                                        ...prev,
+                                        [lang.code]: e.target.value
+                                    }))}
+                                    placeholder={`Translation in ${lang.name}`}
+                                    rows="3"
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </form>
+            </Modal>
         </>
     );
 }
