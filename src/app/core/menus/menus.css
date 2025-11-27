@@ -213,3 +213,140 @@ select option {
         font-size: 10px;
     }
 }
+
+/* Form Styles - matching Edit User popup */
+.formGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+}
+
+.formGrid .formGroup.fullWidth {
+    grid-column: 1 / -1;
+}
+
+.formGroup {
+    margin-bottom: 1.25rem;
+}
+
+.formGroup label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #E2E8F0;
+}
+
+.formInput,
+.formGroup select {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1.5px solid #334155;
+    background: #0F172A;
+    color: #E2E8F0;
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.formInput:focus,
+.formGroup select:focus {
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.formInput:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Status Toggle Styles */
+.statusToggle {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #1E293B;
+    border-radius: 8px;
+    border: 1px solid #334155;
+}
+
+.switch {
+    position: relative;
+    width: 48px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #475569;
+    transition: 0.3s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+input:checked+.slider {
+    background-color: #10b981;
+}
+
+input:checked+.slider:before {
+    transform: translateX(24px);
+}
+
+/* Button Styles */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn.primary {
+    background: #3B82F6;
+    color: white;
+}
+
+.btn.primary:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.btn.secondary {
+    background: transparent;
+    border: 1px solid #334155;
+    color: #94A3B8;
+}
+
+.btn.secondary:hover:not(:disabled) {
+    background: #1E293B;
+    color: #E2E8F0;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

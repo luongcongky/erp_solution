@@ -1,6 +1,7 @@
 'use client';
 
 import PageTemplate from '@/components/PageTemplate';
+import Modal from '@/components/Modal';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslations } from '@/hooks/useTranslations';
 import { useEventTracking } from '@/hooks/useEventTracking';
@@ -30,6 +31,17 @@ export default function MenusPage() {
     });
     const [viewMode, setViewMode] = useState('tree'); // 'tree' or 'flat'
     const [expandedModules, setExpandedModules] = useState(new Set());
+    const [showModal, setShowModal] = useState(false);
+    const [editingMenu, setEditingMenu] = useState(null);
+    const [formData, setFormData] = useState({
+        label: '',
+        href: '',
+        icon: '',
+        parentId: '',
+        order: 0,
+        isActive: true
+    });
+    const [submitting, setSubmitting] = useState(false);
     const { t, loading: loadingTranslations } = useTranslations();
     const { trackEvent } = useEventTracking();
     const MODULE_NAME = 'MENUS';
@@ -58,11 +70,8 @@ export default function MenusPage() {
 
             if (data.success) {
                 setMenuItems(data.data);
-                // Auto-expand all modules by default
-                const parentIds = data.data
-                    .filter(item => !item.parentId)
-                    .map(item => item.id);
-                setExpandedModules(new Set(parentIds));
+                // Default to collapsed state
+                setExpandedModules(new Set());
             }
             setLoadingData(false);
         } catch (err) {
@@ -174,6 +183,67 @@ export default function MenusPage() {
         setExpandedModules(new Set());
     };
 
+    const handleAdd = () => {
+        trackEvent({
+            action: ACTION_TYPES.CREATE,
+            module: MODULE_NAME,
+            object_type: 'Menu',
+            details: 'Opened Add Menu modal'
+        });
+        setEditingMenu(null);
+        setFormData({
+            label: '',
+            href: '',
+            icon: '',
+            parentId: '',
+            order: 0,
+            isActive: true
+        });
+        setShowModal(true);
+    };
+
+    const handleEdit = (item) => {
+        trackEvent({
+            action: ACTION_TYPES.UPDATE,
+            module: MODULE_NAME,
+            object_id: item.id,
+            object_type: 'Menu',
+            details: `Opened Edit Menu modal for: ${item.label}`
+        });
+        setEditingMenu(item);
+        setFormData({
+            label: item.label,
+            href: item.href || '',
+            icon: item.icon || '',
+            parentId: item.parentId || '',
+            order: item.order || 0,
+            isActive: item.isActive
+        });
+        setShowModal(true);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+
+        // Simulate API call
+        try {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            // In a real app, you would call the API here
+            // const response = await fetch('/api/menus', ...);
+
+            // For now, just close the modal and refresh (mock)
+            setShowModal(false);
+            fetchMenus();
+            alert('Menu saved successfully (Mock)');
+        } catch (error) {
+            console.error('Error saving menu:', error);
+            alert('Failed to save menu');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     if (loadingTranslations) {
         return (
             <div style={{
@@ -188,247 +258,174 @@ export default function MenusPage() {
     }
 
     return (
-        <PageTemplate
-            breadcrumbs={[
-                { label: t('modules.settings', 'Settings') },
-                { label: t('pages.menus.title', 'Menus') },
-            ]}
-            actions={
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    {viewMode === 'tree' && (
-                        <>
-                            <button className="btn btn-secondary" onClick={expandAll}>
-                                ⬇️ Expand All
-                            </button>
-                            <button className="btn btn-secondary" onClick={collapseAll}>
-                                ⬆️ Collapse All
-                            </button>
-                        </>
-                    )}
-                    <button
-                        className="btn btn-secondary"
-                        onClick={() => {
-                            const newMode = viewMode === 'tree' ? 'flat' : 'tree';
-                            setViewMode(newMode);
-                            trackEvent({
-                                action: ACTION_TYPES.VIEW_MODE_CHANGE,
-                                module: MODULE_NAME,
-                                details: `Switched to ${newMode} view`,
-                                changes: { viewMode: newMode }
-                            });
-                        }}
-                    >
-                        {viewMode === 'tree' ? '📋 Flat View' : '🌳 Tree View'}
-                    </button>
-                    <button
-                        className="btn btn-primary"
-                        onClick={() => {
-                            trackEvent({
-                                action: ACTION_TYPES.CREATE,
-                                module: MODULE_NAME,
-                                object_type: 'Menu',
-                                details: 'Clicked Add Menu button'
-                            });
-                        }}
-                    >
-                        + {t('pages.menus.addMenu', 'Add Menu')}
-                    </button>
-                </div>
-            }
-            filters={
-                <div className="filterBar">
-                    <div className="searchInputWrapper">
-                        <span className="searchIcon">🔍</span>
-                        <input
-                            type="text"
-                            placeholder={t('pages.menus.searchPlaceholder', 'Search menus...')}
-                            value={filters.search}
-                            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                            className="searchInput"
-                        />
-                    </div>
-
-                    <select
-                        value={filters.parentMenu}
-                        onChange={(e) => setFilters(prev => ({ ...prev, parentMenu: e.target.value }))}
-                        className="filterSelect"
-                    >
-                        <option value="all">
-                            {t('pages.menus.allModules', 'All Modules')} ({menuItems.length})
-                        </option>
-                        {Object.entries(modulesWithCounts).map(([moduleName, data]) => (
-                            <option key={moduleName} value={moduleName}>
-                                {moduleName} ({data.count})
-                            </option>
-                        ))}
-                    </select>
-
-                    <select
-                        value={filters.status}
-                        onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                        className="filterSelect"
-                    >
-                        <option value="all">{t('common.allStatus', 'All Status')}</option>
-                        <option value="active">{t('pages.menus.active', 'Active')}</option>
-                        <option value="inactive">{t('pages.menus.inactive', 'Inactive')}</option>
-                    </select>
-
-                    <select
-                        value={filters.level}
-                        onChange={(e) => setFilters(prev => ({ ...prev, level: e.target.value }))}
-                        className="filterSelect"
-                    >
-                        <option value="all">{t('pages.menus.allLevels', 'All Levels')}</option>
-                        <option value="top">{t('pages.menus.topLevel', 'Top Level')}</option>
-                        <option value="sub">{t('pages.menus.subMenu', 'Sub Menu')}</option>
-                    </select>
-
-                    {(filters.search || filters.parentMenu !== 'all' || filters.status !== 'all' || filters.level !== 'all') && (
+        <>
+            <PageTemplate
+                breadcrumbs={[
+                    { label: t('modules.settings', 'Settings') },
+                    { label: t('pages.menus.title', 'Menus') },
+                ]}
+                actions={
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        {viewMode === 'tree' && (
+                            <>
+                                <button className="btn btn-secondary" onClick={expandAll}>
+                                    ⬇️ Expand All
+                                </button>
+                                <button className="btn btn-secondary" onClick={collapseAll}>
+                                    ⬆️ Collapse All
+                                </button>
+                            </>
+                        )}
                         <button
+                            className="btn btn-secondary"
                             onClick={() => {
-                                setFilters({ search: '', parentMenu: 'all', status: 'all', level: 'all' });
+                                const newMode = viewMode === 'tree' ? 'flat' : 'tree';
+                                setViewMode(newMode);
                                 trackEvent({
-                                    action: ACTION_TYPES.FILTER,
+                                    action: ACTION_TYPES.VIEW_MODE_CHANGE,
                                     module: MODULE_NAME,
-                                    details: 'Cleared all filters'
+                                    details: `Switched to ${newMode} view`,
+                                    changes: { viewMode: newMode }
                                 });
                             }}
-                            className="clearFiltersBtn"
                         >
-                            {t('pages.menus.clearFilters', 'Clear Filters')}
+                            {viewMode === 'tree' ? '📋 Flat View' : '🌳 Tree View'}
                         </button>
-                    )}
-                </div>
-            }
-        >
-            {/* Custom DataTable */}
-            <div className="tableContainer">
-                <div style={{ overflowX: 'auto' }}>
-                    <table className="dataTable">
-                        <thead className="tableHeader">
-                            <tr>
-                                <th className="tableHeaderCell">{t('pages.menus.table.menuItem', 'MENU ITEM')}</th>
-                                <th className="tableHeaderCell">{t('pages.menus.table.path', 'PATH')}</th>
-                                <th className="tableHeaderCell">{t('pages.menus.table.order', 'ORDER')}</th>
-                                <th className="tableHeaderCell">{t('pages.menus.table.status', 'STATUS')}</th>
-                                <th className="tableHeaderCell">{t('pages.menus.table.actions', 'ACTIONS')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {viewMode === 'tree' ? (
-                                // Tree View
-                                parentMenus.map((parent) => {
-                                    const children = childMenus.filter(child => child.parentId === parent.id);
-                                    const isExpanded = expandedModules.has(parent.id);
+                        <button
+                            className="btn btn-primary"
+                            onClick={handleAdd}
+                        >
+                            + {t('pages.menus.addMenu', 'Add Menu')}
+                        </button>
+                    </div>
+                }
+                filters={
+                    <div className="filterBar">
+                        <div className="searchInputWrapper">
+                            <span className="searchIcon">🔍</span>
+                            <input
+                                type="text"
+                                placeholder={t('pages.menus.searchPlaceholder', 'Search menus...')}
+                                value={filters.search}
+                                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                                className="searchInput"
+                            />
+                        </div>
 
-                                    return [
-                                        // Parent Row
-                                        <tr key={`parent-${parent.id}`} className="tableRow parent-row">
-                                            <td className="tableCell">
-                                                <div className="menu-item-with-indicator">
-                                                    <span
-                                                        className="module-indicator"
-                                                        style={{ backgroundColor: getModuleColor(parent) }}
-                                                    />
-                                                    <button
-                                                        className="toggle-button"
-                                                        onClick={() => toggleModule(parent.id)}
-                                                    >
-                                                        {isExpanded ? '▼' : '▶'}
-                                                    </button>
-                                                    {parent.icon && <span className="menuIcon">{parent.icon}</span>}
-                                                    <div className="menuLabel">{parent.label}</div>
-                                                    <span
-                                                        className="module-badge"
-                                                        style={{ backgroundColor: getModuleColor(parent) }}
-                                                    >
-                                                        {children.length}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="tableCell">
-                                                <div className="menuPath">{parent.href || '-'}</div>
-                                            </td>
-                                            <td className="tableCell menuOrder">
-                                                {parent.order}
-                                            </td>
-                                            <td className="tableCell">
-                                                <span className={`statusBadge ${parent.isActive ? 'active' : 'inactive'}`}>
-                                                    {parent.isActive ? t('pages.menus.active', 'Active') : t('pages.menus.inactive', 'Inactive')}
-                                                </span>
-                                            </td>
-                                            <td className="tableCell">
-                                                <div className="actionButtons">
-                                                    <button
-                                                        className="editButton"
-                                                        onClick={() => {
-                                                            trackEvent({
-                                                                action: ACTION_TYPES.UPDATE,
-                                                                module: MODULE_NAME,
-                                                                object_id: parent.id,
-                                                                object_type: 'Menu',
-                                                                details: `Clicked edit for menu: ${parent.label}`
-                                                            });
-                                                        }}
-                                                    >
-                                                        {t('common.edit', 'Edit')}
-                                                    </button>
-                                                    <button
-                                                        className="deleteButton"
-                                                        onClick={() => {
-                                                            trackEvent({
-                                                                action: ACTION_TYPES.DELETE,
-                                                                module: MODULE_NAME,
-                                                                object_id: parent.id,
-                                                                object_type: 'Menu',
-                                                                details: `Clicked delete for menu: ${parent.label}`
-                                                            });
-                                                        }}
-                                                    >
-                                                        {t('common.delete', 'Delete')}
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>,
+                        <select
+                            value={filters.parentMenu}
+                            onChange={(e) => setFilters(prev => ({ ...prev, parentMenu: e.target.value }))}
+                            className="filterSelect"
+                        >
+                            <option value="all">
+                                {t('pages.menus.allModules', 'All Modules')} ({menuItems.length})
+                            </option>
+                            {Object.entries(modulesWithCounts).map(([moduleName, data]) => (
+                                <option key={moduleName} value={moduleName}>
+                                    {moduleName} ({data.count})
+                                </option>
+                            ))}
+                        </select>
 
-                                        // Child Rows (if expanded)
-                                        ...(isExpanded ? children.map((child) => (
-                                            <tr key={`child-${child.id}`} className="tableRow child-row">
+                        <select
+                            value={filters.status}
+                            onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                            className="filterSelect"
+                        >
+                            <option value="all">{t('common.allStatus', 'All Status')}</option>
+                            <option value="active">{t('pages.menus.active', 'Active')}</option>
+                            <option value="inactive">{t('pages.menus.inactive', 'Inactive')}</option>
+                        </select>
+
+                        <select
+                            value={filters.level}
+                            onChange={(e) => setFilters(prev => ({ ...prev, level: e.target.value }))}
+                            className="filterSelect"
+                        >
+                            <option value="all">{t('pages.menus.allLevels', 'All Levels')}</option>
+                            <option value="top">{t('pages.menus.topLevel', 'Top Level')}</option>
+                            <option value="sub">{t('pages.menus.subMenu', 'Sub Menu')}</option>
+                        </select>
+
+                        {(filters.search || filters.parentMenu !== 'all' || filters.status !== 'all' || filters.level !== 'all') && (
+                            <button
+                                onClick={() => {
+                                    setFilters({ search: '', parentMenu: 'all', status: 'all', level: 'all' });
+                                    trackEvent({
+                                        action: ACTION_TYPES.FILTER,
+                                        module: MODULE_NAME,
+                                        details: 'Cleared all filters'
+                                    });
+                                }}
+                                className="clearFiltersBtn"
+                            >
+                                {t('pages.menus.clearFilters', 'Clear Filters')}
+                            </button>
+                        )}
+                    </div>
+                }
+            >
+                {/* Custom DataTable */}
+                <div className="tableContainer">
+                    <div style={{ overflowX: 'auto' }}>
+                        <table className="dataTable">
+                            <thead className="tableHeader">
+                                <tr>
+                                    <th className="tableHeaderCell">{t('pages.menus.table.menuItem', 'MENU ITEM')}</th>
+                                    <th className="tableHeaderCell">{t('pages.menus.table.path', 'PATH')}</th>
+                                    <th className="tableHeaderCell">{t('pages.menus.table.order', 'ORDER')}</th>
+                                    <th className="tableHeaderCell">{t('pages.menus.table.status', 'STATUS')}</th>
+                                    <th className="tableHeaderCell">{t('pages.menus.table.actions', 'ACTIONS')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {viewMode === 'tree' ? (
+                                    // Tree View
+                                    parentMenus.map((parent) => {
+                                        const children = childMenus.filter(child => child.parentId === parent.id);
+                                        const isExpanded = expandedModules.has(parent.id);
+
+                                        return [
+                                            // Parent Row
+                                            <tr key={`parent-${parent.id}`} className="tableRow parent-row">
                                                 <td className="tableCell">
-                                                    <div className="menu-item-with-indicator indented">
+                                                    <div className="menu-item-with-indicator">
                                                         <span
                                                             className="module-indicator"
-                                                            style={{ backgroundColor: getModuleColor(child) }}
+                                                            style={{ backgroundColor: getModuleColor(parent) }}
                                                         />
-                                                        <span className="indent-marker">└─</span>
-                                                        {child.icon && <span className="menuIcon">{child.icon}</span>}
-                                                        <div className="menuLabel">{child.label}</div>
+                                                        <button
+                                                            className="toggle-button"
+                                                            onClick={() => toggleModule(parent.id)}
+                                                        >
+                                                            {isExpanded ? '▼' : '▶'}
+                                                        </button>
+                                                        {parent.icon && <span className="menuIcon">{parent.icon}</span>}
+                                                        <div className="menuLabel">{parent.label}</div>
+                                                        <span
+                                                            className="module-badge"
+                                                            style={{ backgroundColor: getModuleColor(parent) }}
+                                                        >
+                                                            {children.length}
+                                                        </span>
                                                     </div>
                                                 </td>
                                                 <td className="tableCell">
-                                                    <div className="menuPath">{child.href || '-'}</div>
+                                                    <div className="menuPath">{parent.href || '-'}</div>
                                                 </td>
                                                 <td className="tableCell menuOrder">
-                                                    {child.order}
+                                                    {parent.order}
                                                 </td>
                                                 <td className="tableCell">
-                                                    <span className={`statusBadge ${child.isActive ? 'active' : 'inactive'}`}>
-                                                        {child.isActive ? t('pages.menus.active', 'Active') : t('pages.menus.inactive', 'Inactive')}
+                                                    <span className={`statusBadge ${parent.isActive ? 'active' : 'inactive'}`}>
+                                                        {parent.isActive ? t('pages.menus.active', 'Active') : t('pages.menus.inactive', 'Inactive')}
                                                     </span>
                                                 </td>
                                                 <td className="tableCell">
                                                     <div className="actionButtons">
                                                         <button
                                                             className="editButton"
-                                                            onClick={() => {
-                                                                trackEvent({
-                                                                    action: ACTION_TYPES.UPDATE,
-                                                                    module: MODULE_NAME,
-                                                                    object_id: child.id,
-                                                                    object_type: 'Menu',
-                                                                    details: `Clicked edit for submenu: ${child.label}`
-                                                                });
-                                                            }}
+                                                            onClick={() => handleEdit(parent)}
                                                         >
                                                             {t('common.edit', 'Edit')}
                                                         </button>
@@ -438,9 +435,9 @@ export default function MenusPage() {
                                                                 trackEvent({
                                                                     action: ACTION_TYPES.DELETE,
                                                                     module: MODULE_NAME,
-                                                                    object_id: child.id,
+                                                                    object_id: parent.id,
                                                                     object_type: 'Menu',
-                                                                    details: `Clicked delete for submenu: ${child.label}`
+                                                                    details: `Clicked delete for menu: ${parent.label}`
                                                                 });
                                                             }}
                                                         >
@@ -448,89 +445,242 @@ export default function MenusPage() {
                                                         </button>
                                                     </div>
                                                 </td>
-                                            </tr>
-                                        )) : [])
-                                    ];
-                                })
-                            ) : (
-                                // Flat View
-                                filteredData.map((item, index) => (
-                                    <tr
-                                        key={item.id || `menu-item-${index}`}
-                                        className={`tableRow ${index % 2 === 0 ? 'even' : 'odd'}`}
-                                    >
-                                        <td className="tableCell">
-                                            <div className="menu-item-with-indicator">
-                                                <span
-                                                    className="module-indicator"
-                                                    style={{ backgroundColor: getModuleColor(item) }}
-                                                />
-                                                {item.icon && <span className="menuIcon">{item.icon}</span>}
-                                                <div>
-                                                    <div className="menuLabel">{item.label}</div>
-                                                    {getParentLabel(item) && (
-                                                        <div className="parent-label">
+                                            </tr>,
+
+                                            // Child Rows (if expanded)
+                                            ...(isExpanded ? children.map((child) => (
+                                                <tr key={`child-${child.id}`} className="tableRow child-row">
+                                                    <td className="tableCell">
+                                                        <div className="menu-item-with-indicator indented">
                                                             <span
-                                                                className="module-badge-small"
-                                                                style={{ backgroundColor: getModuleColor(item) }}
-                                                            >
-                                                                {getParentLabel(item)}
-                                                            </span>
+                                                                className="module-indicator"
+                                                                style={{ backgroundColor: getModuleColor(child) }}
+                                                            />
+                                                            <span className="indent-marker">└─</span>
+                                                            {child.icon && <span className="menuIcon">{child.icon}</span>}
+                                                            <div className="menuLabel">{child.label}</div>
                                                         </div>
-                                                    )}
+                                                    </td>
+                                                    <td className="tableCell">
+                                                        <div className="menuPath">{child.href || '-'}</div>
+                                                    </td>
+                                                    <td className="tableCell menuOrder">
+                                                        {child.order}
+                                                    </td>
+                                                    <td className="tableCell">
+                                                        <span className={`statusBadge ${child.isActive ? 'active' : 'inactive'}`}>
+                                                            {child.isActive ? t('pages.menus.active', 'Active') : t('pages.menus.inactive', 'Inactive')}
+                                                        </span>
+                                                    </td>
+                                                    <td className="tableCell">
+                                                        <div className="actionButtons">
+                                                            <button
+                                                                className="editButton"
+                                                                onClick={() => handleEdit(child)}
+                                                            >
+                                                                {t('common.edit', 'Edit')}
+                                                            </button>
+                                                            <button
+                                                                className="deleteButton"
+                                                                onClick={() => {
+                                                                    trackEvent({
+                                                                        action: ACTION_TYPES.DELETE,
+                                                                        module: MODULE_NAME,
+                                                                        object_id: child.id,
+                                                                        object_type: 'Menu',
+                                                                        details: `Clicked delete for submenu: ${child.label}`
+                                                                    });
+                                                                }}
+                                                            >
+                                                                {t('common.delete', 'Delete')}
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )) : [])
+                                        ];
+                                    })
+                                ) : (
+                                    // Flat View
+                                    filteredData.map((item, index) => (
+                                        <tr
+                                            key={item.id || `menu-item-${index}`}
+                                            className={`tableRow ${index % 2 === 0 ? 'even' : 'odd'}`}
+                                        >
+                                            <td className="tableCell">
+                                                <div className="menu-item-with-indicator">
+                                                    <span
+                                                        className="module-indicator"
+                                                        style={{ backgroundColor: getModuleColor(item) }}
+                                                    />
+                                                    {item.icon && <span className="menuIcon">{item.icon}</span>}
+                                                    <div>
+                                                        <div className="menuLabel">{item.label}</div>
+                                                        {getParentLabel(item) && (
+                                                            <div className="parent-label">
+                                                                <span
+                                                                    className="module-badge-small"
+                                                                    style={{ backgroundColor: getModuleColor(item) }}
+                                                                >
+                                                                    {getParentLabel(item)}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="tableCell">
-                                            <div className="menuPath">{item.href || '-'}</div>
-                                        </td>
-                                        <td className="tableCell menuOrder">
-                                            {item.order}
-                                        </td>
-                                        <td className="tableCell">
-                                            <span className={`statusBadge ${item.isActive ? 'active' : 'inactive'}`}>
-                                                {item.isActive ? t('pages.menus.active', 'Active') : t('pages.menus.inactive', 'Inactive')}
-                                            </span>
-                                        </td>
-                                        <td className="tableCell">
-                                            <div className="actionButtons">
-                                                <button
-                                                    className="editButton"
-                                                    onClick={() => {
-                                                        trackEvent({
-                                                            action: ACTION_TYPES.UPDATE,
-                                                            module: MODULE_NAME,
-                                                            object_id: item.id,
-                                                            object_type: 'Menu',
-                                                            details: `Clicked edit for menu: ${item.label}`
-                                                        });
-                                                    }}
-                                                >
-                                                    {t('common.edit', 'Edit')}
-                                                </button>
-                                                <button
-                                                    className="deleteButton"
-                                                    onClick={() => {
-                                                        trackEvent({
-                                                            action: ACTION_TYPES.DELETE,
-                                                            module: MODULE_NAME,
-                                                            object_id: item.id,
-                                                            object_type: 'Menu',
-                                                            details: `Clicked delete for menu: ${item.label}`
-                                                        });
-                                                    }}
-                                                >
-                                                    {t('common.delete', 'Delete')}
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                                            </td>
+                                            <td className="tableCell">
+                                                <div className="menuPath">{item.href || '-'}</div>
+                                            </td>
+                                            <td className="tableCell menuOrder">
+                                                {item.order}
+                                            </td>
+                                            <td className="tableCell">
+                                                <span className={`statusBadge ${item.isActive ? 'active' : 'inactive'}`}>
+                                                    {item.isActive ? t('pages.menus.active', 'Active') : t('pages.menus.inactive', 'Inactive')}
+                                                </span>
+                                            </td>
+                                            <td className="tableCell">
+                                                <div className="actionButtons">
+                                                    <button
+                                                        className="editButton"
+                                                        onClick={() => handleEdit(item)}
+                                                    >
+                                                        {t('common.edit', 'Edit')}
+                                                    </button>
+                                                    <button
+                                                        className="deleteButton"
+                                                        onClick={() => {
+                                                            trackEvent({
+                                                                action: ACTION_TYPES.DELETE,
+                                                                module: MODULE_NAME,
+                                                                object_id: item.id,
+                                                                object_type: 'Menu',
+                                                                details: `Clicked delete for menu: ${item.label}`
+                                                            });
+                                                        }}
+                                                    >
+                                                        {t('common.delete', 'Delete')}
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-        </PageTemplate>
+            </PageTemplate>
+
+            {/* Add/Edit Modal */}
+            <Modal
+                isOpen={showModal}
+                onClose={() => setShowModal(false)}
+                title={editingMenu ? t('pages.menus.editMenu', 'Edit Menu') : t('pages.menus.addMenu', 'Add Menu')}
+                maxWidth="800px"
+                footer={
+                    <>
+                        <button
+                            type="button"
+                            className="btn secondary"
+                            onClick={() => setShowModal(false)}
+                            disabled={submitting}
+                        >
+                            {t('common.cancel', 'Cancel')}
+                        </button>
+                        <button
+                            type="submit"
+                            className="btn primary"
+                            disabled={submitting}
+                            onClick={handleSubmit}
+                        >
+                            {submitting ? t('common.saving', 'Saving...') : (editingMenu ? t('common.saveChanges', 'Save Changes') : t('common.create', 'Create'))}
+                        </button>
+                    </>
+                }
+            >
+                <form onSubmit={handleSubmit}>
+                    <div className="formGrid">
+                        <div className="formGroup">
+                            <label>{t('pages.menus.form.label', 'Label')} *</label>
+                            <input
+                                type="text"
+                                className="formInput"
+                                value={formData.label}
+                                onChange={(e) => setFormData(prev => ({ ...prev, label: e.target.value }))}
+                                placeholder="e.g., Dashboard"
+                                required
+                            />
+                        </div>
+
+                        <div className="formGroup">
+                            <label>{t('pages.menus.form.path', 'Path')}</label>
+                            <input
+                                type="text"
+                                className="formInput"
+                                value={formData.href}
+                                onChange={(e) => setFormData(prev => ({ ...prev, href: e.target.value }))}
+                                placeholder="e.g., /dashboard"
+                            />
+                        </div>
+
+                        <div className="formGroup">
+                            <label>{t('pages.menus.form.icon', 'Icon')}</label>
+                            <input
+                                type="text"
+                                className="formInput"
+                                value={formData.icon}
+                                onChange={(e) => setFormData(prev => ({ ...prev, icon: e.target.value }))}
+                                placeholder="e.g., 🏠"
+                            />
+                        </div>
+
+                        <div className="formGroup">
+                            <label>{t('pages.menus.form.order', 'Order')}</label>
+                            <input
+                                type="number"
+                                className="formInput"
+                                value={formData.order}
+                                onChange={(e) => setFormData(prev => ({ ...prev, order: parseInt(e.target.value) || 0 }))}
+                            />
+                        </div>
+
+                        <div className="formGroup fullWidth">
+                            <label>{t('pages.menus.form.parent', 'Parent Menu')}</label>
+                            <select
+                                className="formInput"
+                                value={formData.parentId}
+                                onChange={(e) => setFormData(prev => ({ ...prev, parentId: e.target.value }))}
+                            >
+                                <option value="">{t('pages.menus.form.noParent', 'None (Top Level)')}</option>
+                                {menuItems
+                                    .filter(item => !item.parentId && item.id !== editingMenu?.id) // Exclude self if editing
+                                    .map(item => (
+                                        <option key={item.id} value={item.id}>
+                                            {item.label}
+                                        </option>
+                                    ))}
+                            </select>
+                        </div>
+
+                        <div className="formGroup fullWidth">
+                            <label>{t('pages.menus.form.status', 'Status')}</label>
+                            <div className="statusToggle">
+                                <label className="switch">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.isActive}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
+                                    />
+                                    <span className="slider"></span>
+                                </label>
+                                <span>{formData.isActive ? t('pages.menus.active', 'Active') : t('pages.menus.inactive', 'Inactive')}</span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </Modal>
+        </>
     );
 }
