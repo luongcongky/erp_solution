@@ -25,9 +25,43 @@
     transition: all 0.2s ease;
 }
 
+/* Form Styles - matching Edit User popup */
+.formGroup {
+    margin-bottom: 1.25rem;
+}
+
+.formGroup label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #E2E8F0;
+}
+
 .formGroup .input,
-.formGroup textarea {
+.formGroup textarea,
+.formGroup select {
     width: 100%;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1.5px solid #334155;
+    background: #0F172A;
+    color: #E2E8F0;
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.formGroup .input:focus,
+.formGroup textarea:focus,
+.formGroup select:focus {
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.formGroup .input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .formGroup textarea {
@@ -45,4 +79,26 @@
 .btn-secondary:hover {
     background: var(--surface-hover);
     border-color: var(--border-light);
+}
+
+/* Translation Form Grid */
+.translationsGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.langLabel {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #E2E8F0;
+    font-size: 0.875rem;
+}
+
+.langFlag {
+    font-size: 1.25rem;
 }
