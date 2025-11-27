@@ -70,93 +70,39 @@
     font-family: inherit;
 }
 
-.btn-secondary {
-    background: var(--surface-light);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
-}
-
-.languagesTable {
-    min-width: 1200px;
-}
-
-.moduleBadge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    background: rgba(37, 99, 235, 0.1);
-    color: var(--primary);
-    text-transform: capitalize;
-}
-
-.deleteButton {
-    padding: 6px 12px;
-    background: rgba(239, 68, 68, 0.1);
-    color: #EF4444;
-    border: 1px solid rgba(239, 68, 68, 0.2);
+/* Button Styles */
+.btn {
+    padding: 10px 20px;
+    border: none;
     border-radius: 6px;
-    font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s;
 }
 
-/* Form Styles - matching Edit User popup */
-.formGroup {
-    margin-bottom: 1.25rem;
+.btn.primary {
+    background: #3B82F6;
+    color: white;
 }
 
-.formGroup label {
-    display: block;
-    margin-bottom: 8px;
-    font-size: 0.875rem;
-    font-weight: 500;
+.btn.primary:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.btn.secondary {
+    background: transparent;
+    border: 1px solid #334155;
+    color: #94A3B8;
+}
+
+.btn.secondary:hover:not(:disabled) {
+    background: #1E293B;
     color: #E2E8F0;
 }
 
-.formGroup .input,
-.formGroup textarea,
-.formGroup select {
-    width: 100%;
-    padding: 0.75rem;
-    border-radius: 8px;
-    border: 1.5px solid #334155;
-    background: #0F172A;
-    color: #E2E8F0;
-    font-size: 0.875rem;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.formGroup .input:focus,
-.formGroup textarea:focus,
-.formGroup select:focus {
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.formGroup .input:disabled {
+.btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-}
-
-.formGroup textarea {
-    resize: vertical;
-    min-height: 60px;
-    font-family: inherit;
-}
-
-.btn-secondary {
-    background: var(--surface-light);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
-}
-
-.btn-secondary:hover {
-    background: var(--surface-hover);
-    border-color: var(--border-light);
 }
 
 /* Translation Form Grid */
