@@ -28,10 +28,9 @@ export default function LanguagesPage() {
         key: '',
         module: 'core',
         description: '',
-        vi: '',
-        en: '',
-        ko: ''
+        translations: {}
     });
+    const [activeLanguages, setActiveLanguages] = useState([]);
     const [submitting, setSubmitting] = useState(false);
 
     const languages = [
@@ -90,11 +89,25 @@ export default function LanguagesPage() {
             key: '',
             module: 'core',
             description: '',
-            vi: '',
-            en: '',
-            ko: ''
+            translations: {}
         });
+        setActiveLanguages([]);
         setShowModal(true);
+    };
+
+    const handleAddLanguage = (langCode) => {
+        if (!activeLanguages.includes(langCode)) {
+            setActiveLanguages([...activeLanguages, langCode]);
+        }
+    };
+
+    const handleRemoveLanguage = (langCode) => {
+        setActiveLanguages(activeLanguages.filter(code => code !== langCode));
+        setFormData(prev => {
+            const newTranslations = { ...prev.translations };
+            delete newTranslations[langCode];
+            return { ...prev, translations: newTranslations };
+        });
     };
 
     const handleEdit = (item) => {
@@ -102,18 +115,20 @@ export default function LanguagesPage() {
             action: ACTION_TYPES.UPDATE,
             module: MODULE_NAME,
             object_type: 'Translation',
-            object_id: item.key,
-            details: `Opened Edit Translation modal for key: ${item.key}`
+            details: `Opened Edit Translation modal for key: ${item.key}`,
+            changes: { key: item.key }
         });
         setEditingKey(item.key);
+        const currentTranslations = item.translations || {};
+        const activeLangs = Object.keys(currentTranslations).filter(key => currentTranslations[key]);
+
         setFormData({
             key: item.key,
             module: item.module || 'core',
             description: item.description || '',
-            vi: item.translations.vi || '',
-            en: item.translations.en || '',
-            ko: item.translations.ko || ''
+            translations: currentTranslations
         });
+        setActiveLanguages(activeLangs.length > 0 ? activeLangs : []);
         setShowModal(true);
     };
 
@@ -126,8 +141,8 @@ export default function LanguagesPage() {
             action: ACTION_TYPES.DELETE,
             module: MODULE_NAME,
             object_type: 'Translation',
-            object_id: key,
-            details: `Deleted translation key: ${key}`
+            details: `Deleted translation key: ${key}`,
+            changes: { key: key }
         });
 
         try {
@@ -155,11 +170,8 @@ export default function LanguagesPage() {
             key: formData.key,
             module: formData.module,
             description: formData.description,
-            translations: {
-                vi: formData.vi,
-                en: formData.en,
-                ko: formData.ko
-            }
+            description: formData.description,
+            translations: formData.translations
         };
 
         try {
@@ -479,25 +491,68 @@ export default function LanguagesPage() {
                         />
                     </div>
 
+                    <div className="formGroup">
+                        <label>Add Language</label>
+                        <div className="addLanguageControl">
+                            <select
+                                className="input"
+                                onChange={(e) => {
+                                    if (e.target.value) {
+                                        handleAddLanguage(e.target.value);
+                                        e.target.value = '';
+                                    }
+                                }}
+                                defaultValue=""
+                            >
+                                <option value="" disabled>Select a language to add...</option>
+                                {languages
+                                    .filter(lang => !activeLanguages.includes(lang.code))
+                                    .map(lang => (
+                                        <option key={lang.code} value={lang.code}>
+                                            {lang.flag} {lang.name}
+                                        </option>
+                                    ))}
+                            </select>
+                        </div>
+                    </div>
+
                     <div className="translationsGrid">
-                        {languages.map(lang => (
-                            <div key={lang.code} className="formGroup">
-                                <label className="langLabel">
-                                    <span className="langFlag">{lang.flag}</span>
-                                    {lang.name}
-                                </label>
-                                <textarea
-                                    className="input"
-                                    value={formData[lang.code] || ''}
-                                    onChange={(e) => setFormData(prev => ({
-                                        ...prev,
-                                        [lang.code]: e.target.value
-                                    }))}
-                                    placeholder={`Translation in ${lang.name}`}
-                                    rows="3"
-                                />
-                            </div>
-                        ))}
+                        {activeLanguages.map(langCode => {
+                            const lang = languages.find(l => l.code === langCode);
+                            if (!lang) return null;
+
+                            return (
+                                <div key={lang.code} className="translationItem">
+                                    <div className="translationHeader">
+                                        <label className="langLabel">
+                                            <span className="langFlag">{lang.flag}</span>
+                                            {lang.name}
+                                        </label>
+                                        <button
+                                            type="button"
+                                            className="removeLangBtn"
+                                            onClick={() => handleRemoveLanguage(lang.code)}
+                                            title="Remove language"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                    <textarea
+                                        className="input"
+                                        value={formData.translations[lang.code] || ''}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            translations: {
+                                                ...prev.translations,
+                                                [lang.code]: e.target.value
+                                            }
+                                        }))}
+                                        placeholder={`Translation in ${lang.name}`}
+                                        rows="3"
+                                    />
+                                </div>
+                            );
+                        })}
                     </div>
                 </form>
             </Modal>

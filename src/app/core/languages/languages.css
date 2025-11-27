@@ -76,6 +76,84 @@
     border: 1px solid var(--border);
 }
 
+.languagesTable {
+    min-width: 1200px;
+}
+
+.moduleBadge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--primary);
+    text-transform: capitalize;
+}
+
+.deleteButton {
+    padding: 6px 12px;
+    background: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* Form Styles - matching Edit User popup */
+.formGroup {
+    margin-bottom: 1.25rem;
+}
+
+.formGroup label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #E2E8F0;
+}
+
+.formGroup .input,
+.formGroup textarea,
+.formGroup select {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1.5px solid #334155;
+    background: #0F172A;
+    color: #E2E8F0;
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.formGroup .input:focus,
+.formGroup textarea:focus,
+.formGroup select:focus {
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.formGroup .input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.formGroup textarea {
+    resize: vertical;
+    min-height: 60px;
+    font-family: inherit;
+}
+
+.btn-secondary {
+    background: var(--surface-light);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
 .btn-secondary:hover {
     background: var(--surface-hover);
     border-color: var(--border-light);
@@ -89,16 +167,54 @@
     margin-top: 1.5rem;
 }
 
+.translationItem {
+    background: rgba(30, 41, 59, 0.5);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #334155;
+}
+
+.translationHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
 .langLabel {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 8px;
     font-weight: 500;
     color: #E2E8F0;
     font-size: 0.875rem;
+    margin: 0;
 }
 
 .langFlag {
     font-size: 1.25rem;
+}
+
+.removeLangBtn {
+    background: transparent;
+    border: none;
+    color: #94A3B8;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: 1rem;
+}
+
+.removeLangBtn:hover {
+    color: #EF4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.addLanguageControl {
+    display: flex;
+    gap: 1rem;
 }
