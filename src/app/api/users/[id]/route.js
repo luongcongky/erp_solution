@@ -114,7 +114,7 @@ export async function PUT(request, { params }) {
             replacements.isActive = isActive;
         }
         if (password) {
-            const bcrypt = require('bcryptjs');
+            const bcrypt = require('bcrypt');
             const hashedPassword = await bcrypt.hash(password, 10);
             updateFields.push('"password" = :password');
             replacements.password = hashedPassword;
@@ -131,7 +131,7 @@ export async function PUT(request, { params }) {
         // Update roles
         // First, delete existing role assignments
         await sequelize.query(
-            `DELETE FROM "core"."user_roles" WHERE user_id = :id`,
+            `DELETE FROM "core"."user_roles" WHERE user_id = :id AND ten_id = '1000' AND stg_id = 'DEV'`,
             { replacements: { id } }
         );
 

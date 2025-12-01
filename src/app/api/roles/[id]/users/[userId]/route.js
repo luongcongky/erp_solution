@@ -48,7 +48,7 @@ export async function DELETE(request, { params }) {
 
         // Delete from user_roles table
         await sequelize.query(
-            `DELETE FROM "core"."user_roles" WHERE role_id = :roleId AND user_id = :userId`,
+            `DELETE FROM "core"."user_roles" WHERE role_id = :roleId AND user_id = :userId AND ten_id = '1000' AND stg_id = 'DEV'`,
             {
                 replacements: { roleId: id, userId: userId }
             }

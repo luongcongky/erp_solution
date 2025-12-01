@@ -9,6 +9,7 @@ import Company from './Company.js';
 
 // Import Core models
 import Role from './core/Role.js';
+import UserRole from './core/UserRole.js';
 import Permission from './core/Permission.js';
 import AuditLog from './core/AuditLog.js';
 import Partner from './core/Partner.js';
@@ -55,6 +56,7 @@ const models = {
 
     // Core
     Role,
+    UserRole,
     Permission,
     AuditLog,
     Partner,
@@ -158,7 +160,7 @@ export function setupAssociations() {
     }
 
     const {
-        User, Role, Permission, Partner, Employee, Department,
+        User, Role, UserRole, Permission, Partner, Employee, Department,
         Lead, Opportunity, Quotation, QuotationLine, SalesOrder, SalesOrderLine, CustomerActivity,
         PurchaseRequest, PurchaseRequestLine, RFQ, RFQLine, PurchaseOrder, PurchaseOrderLine,
         InventoryProduct, Warehouse, StockQuant, StockMove, StockAdjustment, StockAdjustmentLine,
@@ -172,7 +174,7 @@ export function setupAssociations() {
     } = models;
 
     // Core relationships
-    User.belongsToMany(Role, { through: 'user_roles', foreignKey: 'user_id' });
+    User.belongsToMany(Role, { through: UserRole, foreignKey: 'user_id' });
     Role.belongsToMany(Permission, { through: 'role_permissions', foreignKey: 'role_id' });
     Permission.belongsToMany(Role, { through: 'role_permissions', foreignKey: 'permission_id' });
     AuditLog.belongsTo(User, { as: 'user', foreignKey: 'user_id' });

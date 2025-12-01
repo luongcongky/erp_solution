@@ -481,9 +481,13 @@ export default function UsersPage() {
                                             {user.email}
                                         </td>
                                         <td className="tableCell">
-                                            <span className={`roleBadge ${user.role.toLowerCase().replace(/\s+/g, '-')}`}>
-                                                {user.role}
-                                            </span>
+                                            <div className="roleContainer">
+                                                {user.role.split(', ').map((role, idx) => (
+                                                    <span key={idx} className={`roleBadge ${role.toLowerCase().replace(/\s+/g, '-')}`}>
+                                                        {role}
+                                                    </span>
+                                                ))}
+                                            </div>
                                         </td>
                                         <td className="tableCell">
                                             <div className="statusPill">

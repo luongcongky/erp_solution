@@ -133,7 +133,7 @@ export async function POST(request) {
         }
 
         // Hash password (simple hash for demo - use bcrypt in production)
-        const bcrypt = require('bcryptjs');
+        const bcrypt = require('bcrypt');
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Create user

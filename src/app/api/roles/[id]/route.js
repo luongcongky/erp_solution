@@ -41,7 +41,7 @@ export async function DELETE(request, { params }) {
 
         // Check if role has users
         const [countResult] = await sequelize.query(
-            `SELECT COUNT(*) as count FROM "core"."user_roles" WHERE role_id = :roleId`,
+            `SELECT COUNT(*) as count FROM "core"."user_roles" WHERE role_id = :roleId AND ten_id = '1000' AND stg_id = 'DEV'`,
             {
                 replacements: { roleId: id },
                 type: sequelize.QueryTypes.SELECT

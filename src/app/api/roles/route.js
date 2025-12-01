@@ -47,7 +47,7 @@ export async function GET(request) {
         // Manually fetch counts for each role to verify data
         for (let role of roles) {
             const [countResult] = await sequelize.query(
-                `SELECT COUNT(*) as count FROM "core"."user_roles" WHERE role_id = :roleId`,
+                `SELECT COUNT(*) as count FROM "core"."user_roles" WHERE role_id = :roleId AND ten_id = '1000' AND stg_id = 'DEV'`,
                 {
                     replacements: { roleId: role.id },
                     type: sequelize.QueryTypes.SELECT

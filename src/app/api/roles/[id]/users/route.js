@@ -48,7 +48,7 @@ export async function GET(request, { params }) {
             `SELECT u.id, u.email, u."firstName", u."lastName", u."isActive", u."createdAt"
              FROM "core"."users" u
              JOIN "core"."user_roles" ur ON u.id = ur.user_id
-             WHERE ur.role_id = :roleId
+             WHERE ur.role_id = :roleId AND ur.ten_id = '1000' AND ur.stg_id = 'DEV'
              ORDER BY u."firstName" ASC, u."lastName" ASC`,
             {
                 replacements: { roleId: id }
