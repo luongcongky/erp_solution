@@ -6,6 +6,21 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslations } from '@/hooks/useTranslations';
 import { useEventTracking } from '@/hooks/useEventTracking';
 import { ACTION_TYPES } from '@/config/action.config';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { SortableMenuRow } from './SortableMenuRow';
 import '@/styles/datatable-common.css';
 import './menus.css';
 
@@ -42,15 +57,24 @@ export default function MenusPage() {
         isActive: true
     });
     const [submitting, setSubmitting] = useState(false);
+    const [activeId, setActiveId] = useState(null);
     const { t, loading: loadingTranslations } = useTranslations();
     const { trackEvent } = useEventTracking();
     const MODULE_NAME = 'MENUS';
+
+    // Drag and drop sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
     useEffect(() => {
         fetchMenus();
     }, []);
 
-    const fetchMenus = async () => {
+    const fetchMenus = async (preserveExpandState = false) => {
         try {
             const userData = localStorage.getItem('user');
             const user = userData ? JSON.parse(userData) : null;
@@ -70,8 +94,10 @@ export default function MenusPage() {
 
             if (data.success) {
                 setMenuItems(data.data);
-                // Default to collapsed state
-                setExpandedModules(new Set());
+                // Only collapse all on initial load, preserve state on refresh
+                if (!preserveExpandState) {
+                    setExpandedModules(new Set());
+                }
             }
             setLoadingData(false);
         } catch (err) {
@@ -234,13 +260,102 @@ export default function MenusPage() {
 
             // For now, just close the modal and refresh (mock)
             setShowModal(false);
-            fetchMenus();
+            fetchMenus(true); // Preserve expand state
             alert('Menu saved successfully (Mock)');
         } catch (error) {
             console.error('Error saving menu:', error);
             alert('Failed to save menu');
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    // Drag and drop handlers
+    const handleDragStart = (event) => {
+        setActiveId(event.active.id);
+    };
+
+    const handleDragEnd = async (event) => {
+        const { active, over } = event;
+        setActiveId(null);
+
+        if (!over || active.id === over.id) return;
+
+        const activeItem = menuItems.find(item => item.id === active.id);
+        const overItem = menuItems.find(item => item.id === over.id);
+
+        if (!activeItem || !overItem) return;
+
+        // Determine drag type
+        const isModuleDrag = !activeItem.parentId && !overItem.parentId;
+        const isSameParentDrag = activeItem.parentId === overItem.parentId;
+        const isCrossModuleDrag = activeItem.parentId && overItem.parentId && activeItem.parentId !== overItem.parentId;
+        const isPageToModuleDrag = activeItem.parentId && !overItem.parentId;
+
+        let updates = [];
+
+        if (isModuleDrag) {
+            // Reorder modules
+            const modules = menuItems.filter(item => !item.parentId);
+            const oldIndex = modules.findIndex(item => item.id === active.id);
+            const newIndex = modules.findIndex(item => item.id === over.id);
+            const reorderedModules = arrayMove(modules, oldIndex, newIndex);
+
+            updates = reorderedModules.map((item, index) => ({
+                id: item.id,
+                order: index + 1,
+                parentId: null
+            }));
+        } else if (isSameParentDrag) {
+            // Reorder pages within same module
+            const pages = menuItems.filter(item => item.parentId === activeItem.parentId);
+            const oldIndex = pages.findIndex(item => item.id === active.id);
+            const newIndex = pages.findIndex(item => item.id === over.id);
+            const reorderedPages = arrayMove(pages, oldIndex, newIndex);
+
+            updates = reorderedPages.map((item, index) => ({
+                id: item.id,
+                order: index + 1,
+                parentId: activeItem.parentId
+            }));
+        } else if (isPageToModuleDrag) {
+            // Move page to different module
+            const confirmed = window.confirm(
+                `Move "${activeItem.label}" to "${overItem.label}" module?`
+            );
+
+            if (!confirmed) return;
+
+            updates = [{
+                id: activeItem.id,
+                order: 999, // Will be at the end
+                parentId: overItem.id
+            }];
+        }
+
+        if (updates.length > 0) {
+            try {
+                const response = await fetch('/api/menus/reorder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ updates })
+                });
+
+                if (!response.ok) throw new Error('Failed to save order');
+
+                // Preserve expand/collapse state when refreshing after drag-and-drop
+                await fetchMenus(true);
+
+                trackEvent({
+                    action: ACTION_TYPES.UPDATE,
+                    module: MODULE_NAME,
+                    object_id: active.id,
+                    details: 'Reordered menu items via drag and drop'
+                });
+            } catch (error) {
+                console.error('Error saving order:', error);
+                alert('Failed to save new order');
+            }
         }
     };
 
@@ -366,211 +481,262 @@ export default function MenusPage() {
                 }
             >
                 {/* Custom DataTable */}
-                <div className="tableContainer">
-                    <div style={{ overflowX: 'auto' }}>
-                        <table className="dataTable">
-                            <thead className="tableHeader">
-                                <tr>
-                                    <th className="tableHeaderCell">{t('pages.menus.table.menuItem', 'MENU ITEM')}</th>
-                                    <th className="tableHeaderCell">{t('pages.menus.table.path', 'PATH')}</th>
-                                    <th className="tableHeaderCell">{t('pages.menus.table.order', 'ORDER')}</th>
-                                    <th className="tableHeaderCell">{t('pages.menus.table.status', 'STATUS')}</th>
-                                    <th className="tableHeaderCell">{t('pages.menus.table.actions', 'ACTIONS')}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {viewMode === 'tree' ? (
-                                    // Tree View
-                                    parentMenus.map((parent) => {
-                                        const children = childMenus.filter(child => child.parentId === parent.id);
-                                        const isExpanded = expandedModules.has(parent.id);
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                >
+                    <div className="tableContainer">
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="dataTable">
+                                <thead className="tableHeader">
+                                    <tr>
+                                        <th className="tableHeaderCell" style={{ width: '40px' }}></th>
+                                        <th className="tableHeaderCell">{t('pages.menus.table.menuItem', 'MENU ITEM')}</th>
+                                        <th className="tableHeaderCell">{t('pages.menus.table.path', 'PATH')}</th>
+                                        <th className="tableHeaderCell">{t('pages.menus.table.order', 'ORDER')}</th>
+                                        <th className="tableHeaderCell">{t('pages.menus.table.status', 'STATUS')}</th>
+                                        <th className="tableHeaderCell">{t('pages.menus.table.actions', 'ACTIONS')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <SortableContext
+                                        items={viewMode === 'tree' ? parentMenus.map(p => p.id) : filteredData.map(d => d.id)}
+                                        strategy={verticalListSortingStrategy}
+                                    >
+                                        {viewMode === 'tree' ? (
+                                            // Tree View
+                                            parentMenus.map((parent) => {
+                                                const children = childMenus.filter(child => child.parentId === parent.id);
+                                                const isExpanded = expandedModules.has(parent.id);
 
-                                        return [
-                                            // Parent Row
-                                            <tr key={`parent-${parent.id}`} className="tableRow parent-row">
-                                                <td className="tableCell">
-                                                    <div className="menu-item-with-indicator">
-                                                        <span
-                                                            className="module-indicator"
-                                                            style={{ backgroundColor: getModuleColor(parent) }}
-                                                        />
-                                                        <button
-                                                            className="toggle-button"
-                                                            onClick={() => toggleModule(parent.id)}
-                                                        >
-                                                            {isExpanded ? '▼' : '▶'}
-                                                        </button>
-                                                        {parent.icon && <span className="menuIcon">{parent.icon}</span>}
-                                                        <div className="menuLabel">{parent.label}</div>
-                                                        <span
-                                                            className="module-badge"
-                                                            style={{ backgroundColor: getModuleColor(parent) }}
-                                                        >
-                                                            {children.length}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="tableCell">
-                                                    <div className="menuPath">{parent.href || '-'}</div>
-                                                </td>
-                                                <td className="tableCell menuOrder">
-                                                    {parent.order}
-                                                </td>
-                                                <td className="tableCell">
-                                                    <span className={`statusBadge ${parent.isActive ? 'active' : 'inactive'}`}>
-                                                        {parent.isActive ? t('pages.menus.active', 'Active') : t('pages.menus.inactive', 'Inactive')}
-                                                    </span>
-                                                </td>
-                                                <td className="tableCell">
-                                                    <div className="actionButtons">
-                                                        <button
-                                                            className="editButton"
-                                                            onClick={() => handleEdit(parent)}
-                                                        >
-                                                            {t('common.edit', 'Edit')}
-                                                        </button>
-                                                        <button
-                                                            className="deleteButton"
-                                                            onClick={() => {
-                                                                trackEvent({
-                                                                    action: ACTION_TYPES.DELETE,
-                                                                    module: MODULE_NAME,
-                                                                    object_id: parent.id,
-                                                                    object_type: 'Menu',
-                                                                    details: `Clicked delete for menu: ${parent.label}`
-                                                                });
-                                                            }}
-                                                        >
-                                                            {t('common.delete', 'Delete')}
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>,
-
-                                            // Child Rows (if expanded)
-                                            ...(isExpanded ? children.map((child) => (
-                                                <tr key={`child-${child.id}`} className="tableRow child-row">
-                                                    <td className="tableCell">
-                                                        <div className="menu-item-with-indicator indented">
-                                                            <span
-                                                                className="module-indicator"
-                                                                style={{ backgroundColor: getModuleColor(child) }}
-                                                            />
-                                                            <span className="indent-marker">└─</span>
-                                                            {child.icon && <span className="menuIcon">{child.icon}</span>}
-                                                            <div className="menuLabel">{child.label}</div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="tableCell">
-                                                        <div className="menuPath">{child.href || '-'}</div>
-                                                    </td>
-                                                    <td className="tableCell menuOrder">
-                                                        {child.order}
-                                                    </td>
-                                                    <td className="tableCell">
-                                                        <span className={`statusBadge ${child.isActive ? 'active' : 'inactive'}`}>
-                                                            {child.isActive ? t('pages.menus.active', 'Active') : t('pages.menus.inactive', 'Inactive')}
-                                                        </span>
-                                                    </td>
-                                                    <td className="tableCell">
-                                                        <div className="actionButtons">
-                                                            <button
-                                                                className="editButton"
-                                                                onClick={() => handleEdit(child)}
-                                                            >
-                                                                {t('common.edit', 'Edit')}
-                                                            </button>
-                                                            <button
-                                                                className="deleteButton"
-                                                                onClick={() => {
-                                                                    trackEvent({
-                                                                        action: ACTION_TYPES.DELETE,
-                                                                        module: MODULE_NAME,
-                                                                        object_id: child.id,
-                                                                        object_type: 'Menu',
-                                                                        details: `Clicked delete for submenu: ${child.label}`
-                                                                    });
-                                                                }}
-                                                            >
-                                                                {t('common.delete', 'Delete')}
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )) : [])
-                                        ];
-                                    })
-                                ) : (
-                                    // Flat View
-                                    filteredData.map((item, index) => (
-                                        <tr
-                                            key={item.id || `menu-item-${index}`}
-                                            className={`tableRow ${index % 2 === 0 ? 'even' : 'odd'}`}
-                                        >
-                                            <td className="tableCell">
-                                                <div className="menu-item-with-indicator">
-                                                    <span
-                                                        className="module-indicator"
-                                                        style={{ backgroundColor: getModuleColor(item) }}
-                                                    />
-                                                    {item.icon && <span className="menuIcon">{item.icon}</span>}
-                                                    <div>
-                                                        <div className="menuLabel">{item.label}</div>
-                                                        {getParentLabel(item) && (
-                                                            <div className="parent-label">
-                                                                <span
-                                                                    className="module-badge-small"
-                                                                    style={{ backgroundColor: getModuleColor(item) }}
-                                                                >
-                                                                    {getParentLabel(item)}
-                                                                </span>
-                                                            </div>
+                                                return [
+                                                    // Parent Row
+                                                    <SortableMenuRow
+                                                        key={`parent-${parent.id}`}
+                                                        id={parent.id}
+                                                        isDragging={activeId === parent.id}
+                                                    >
+                                                        {({ listeners, attributes }) => (
+                                                            <>
+                                                                <td className="tableCell">
+                                                                    <span className="dragHandle" {...listeners} {...attributes}>
+                                                                        ⋮⋮
+                                                                    </span>
+                                                                </td>
+                                                                <td className="tableCell">
+                                                                    <div className="menu-item-with-indicator">
+                                                                        <span
+                                                                            className="module-indicator"
+                                                                            style={{ backgroundColor: getModuleColor(parent) }}
+                                                                        />
+                                                                        <button
+                                                                            className="toggle-button"
+                                                                            onClick={() => toggleModule(parent.id)}
+                                                                        >
+                                                                            {isExpanded ? '▼' : '▶'}
+                                                                        </button>
+                                                                        {parent.icon && <span className="menuIcon">{parent.icon}</span>}
+                                                                        <div className="menuLabel">{parent.label}</div>
+                                                                        <span
+                                                                            className="module-badge"
+                                                                            style={{ backgroundColor: getModuleColor(parent) }}
+                                                                        >
+                                                                            {children.length}
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="tableCell">
+                                                                    <div className="menuPath">{parent.href || '-'}</div>
+                                                                </td>
+                                                                <td className="tableCell menuOrder">
+                                                                    {parent.order}
+                                                                </td>
+                                                                <td className="tableCell">
+                                                                    <span className={`statusBadge ${parent.isActive ? 'active' : 'inactive'}`}>
+                                                                        {parent.isActive ? t('pages.menus.active', 'Active') : t('pages.menus.inactive', 'Inactive')}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="tableCell">
+                                                                    <div className="actionButtons">
+                                                                        <button
+                                                                            className="editButton"
+                                                                            onClick={() => handleEdit(parent)}
+                                                                        >
+                                                                            {t('common.edit', 'Edit')}
+                                                                        </button>
+                                                                        <button
+                                                                            className="deleteButton"
+                                                                            onClick={() => {
+                                                                                trackEvent({
+                                                                                    action: ACTION_TYPES.DELETE,
+                                                                                    module: MODULE_NAME,
+                                                                                    object_id: parent.id,
+                                                                                    object_type: 'Menu',
+                                                                                    details: `Clicked delete for menu: ${parent.label}`
+                                                                                });
+                                                                            }}
+                                                                        >
+                                                                            {t('common.delete', 'Delete')}
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            </>
                                                         )}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="tableCell">
-                                                <div className="menuPath">{item.href || '-'}</div>
-                                            </td>
-                                            <td className="tableCell menuOrder">
-                                                {item.order}
-                                            </td>
-                                            <td className="tableCell">
-                                                <span className={`statusBadge ${item.isActive ? 'active' : 'inactive'}`}>
-                                                    {item.isActive ? t('pages.menus.active', 'Active') : t('pages.menus.inactive', 'Inactive')}
-                                                </span>
-                                            </td>
-                                            <td className="tableCell">
-                                                <div className="actionButtons">
-                                                    <button
-                                                        className="editButton"
-                                                        onClick={() => handleEdit(item)}
-                                                    >
-                                                        {t('common.edit', 'Edit')}
-                                                    </button>
-                                                    <button
-                                                        className="deleteButton"
-                                                        onClick={() => {
-                                                            trackEvent({
-                                                                action: ACTION_TYPES.DELETE,
-                                                                module: MODULE_NAME,
-                                                                object_id: item.id,
-                                                                object_type: 'Menu',
-                                                                details: `Clicked delete for menu: ${item.label}`
-                                                            });
-                                                        }}
-                                                    >
-                                                        {t('common.delete', 'Delete')}
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                                                    </SortableMenuRow>,
+
+                                                    // Child Rows (if expanded)
+                                                    ...(isExpanded ? children.map((child) => (
+                                                        <SortableMenuRow
+                                                            key={`child-${child.id}`}
+                                                            id={child.id}
+                                                            isDragging={activeId === child.id}
+                                                            isChild={true}
+                                                        >
+                                                            {({ listeners, attributes }) => (
+                                                                <>
+                                                                    <td className="tableCell">
+                                                                        <span className="dragHandle" {...listeners} {...attributes}>
+                                                                            ⋮⋮
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="tableCell">
+                                                                        <div className="menu-item-with-indicator indented">
+                                                                            <span
+                                                                                className="module-indicator"
+                                                                                style={{ backgroundColor: getModuleColor(child) }}
+                                                                            />
+                                                                            <span className="indent-marker">└─</span>
+                                                                            {child.icon && <span className="menuIcon">{child.icon}</span>}
+                                                                            <div className="menuLabel">{child.label}</div>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="tableCell">
+                                                                        <div className="menuPath">{child.href || '-'}</div>
+                                                                    </td>
+                                                                    <td className="tableCell menuOrder">
+                                                                        {child.order}
+                                                                    </td>
+                                                                    <td className="tableCell">
+                                                                        <span className={`statusBadge ${child.isActive ? 'active' : 'inactive'}`}>
+                                                                            {child.isActive ? t('pages.menus.active', 'Active') : t('pages.menus.inactive', 'Inactive')}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="tableCell">
+                                                                        <div className="actionButtons">
+                                                                            <button
+                                                                                className="editButton"
+                                                                                onClick={() => handleEdit(child)}
+                                                                            >
+                                                                                {t('common.edit', 'Edit')}
+                                                                            </button>
+                                                                            <button
+                                                                                className="deleteButton"
+                                                                                onClick={() => {
+                                                                                    trackEvent({
+                                                                                        action: ACTION_TYPES.DELETE,
+                                                                                        module: MODULE_NAME,
+                                                                                        object_id: child.id,
+                                                                                        object_type: 'Menu',
+                                                                                        details: `Clicked delete for submenu: ${child.label}`
+                                                                                    });
+                                                                                }}
+                                                                            >
+                                                                                {t('common.delete', 'Delete')}
+                                                                            </button>
+                                                                        </div>
+                                                                    </td>
+                                                                </>
+                                                            )}
+                                                        </SortableMenuRow>
+                                                    )) : [])
+                                                ];
+                                            })
+                                        ) : (
+                                            // Flat View
+                                            filteredData.map((item, index) => (
+                                                <SortableMenuRow
+                                                    key={item.id || `menu-item-${index}`}
+                                                    id={item.id}
+                                                    isDragging={activeId === item.id}
+                                                    isChild={!!item.parentId}
+                                                >
+                                                    {({ listeners, attributes }) => (
+                                                        <>
+                                                            <td className="tableCell">
+                                                                <span className="dragHandle" {...listeners} {...attributes}>
+                                                                    ⋮⋮
+                                                                </span>
+                                                            </td>
+                                                            <td className="tableCell">
+                                                                <div className="menu-item-with-indicator">
+                                                                    <span
+                                                                        className="module-indicator"
+                                                                        style={{ backgroundColor: getModuleColor(item) }}
+                                                                    />
+                                                                    {item.icon && <span className="menuIcon">{item.icon}</span>}
+                                                                    <div>
+                                                                        <div className="menuLabel">{item.label}</div>
+                                                                        {getParentLabel(item) && (
+                                                                            <div className="parent-label">
+                                                                                <span
+                                                                                    className="module-badge-small"
+                                                                                    style={{ backgroundColor: getModuleColor(item) }}
+                                                                                >
+                                                                                    {getParentLabel(item)}
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="tableCell">
+                                                                <div className="menuPath">{item.href || '-'}</div>
+                                                            </td>
+                                                            <td className="tableCell menuOrder">
+                                                                {item.order}
+                                                            </td>
+                                                            <td className="tableCell">
+                                                                <span className={`statusBadge ${item.isActive ? 'active' : 'inactive'}`}>
+                                                                    {item.isActive ? t('pages.menus.active', 'Active') : t('pages.menus.inactive', 'Inactive')}
+                                                                </span>
+                                                            </td>
+                                                            <td className="tableCell">
+                                                                <div className="actionButtons">
+                                                                    <button
+                                                                        className="editButton"
+                                                                        onClick={() => handleEdit(item)}
+                                                                    >
+                                                                        {t('common.edit', 'Edit')}
+                                                                    </button>
+                                                                    <button
+                                                                        className="deleteButton"
+                                                                        onClick={() => {
+                                                                            trackEvent({
+                                                                                action: ACTION_TYPES.DELETE,
+                                                                                module: MODULE_NAME,
+                                                                                object_id: item.id,
+                                                                                object_type: 'Menu',
+                                                                                details: `Clicked delete for menu: ${item.label}`
+                                                                            });
+                                                                        }}
+                                                                    >
+                                                                        {t('common.delete', 'Delete')}
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </>
+                                                    )}
+                                                </SortableMenuRow>
+                                            ))
+                                        )}
+                                    </SortableContext>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
+                </DndContext>
             </PageTemplate>
 
             {/* Add/Edit Modal */}
