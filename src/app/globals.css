@@ -55,7 +55,7 @@
   /* Sidebar */
   --sidebar-width: 260px;
   --sidebar-collapsed-width: 80px;
-  --header-height: 64px;
+  --header-height: 56px;
 }
 
 * {
@@ -158,10 +158,10 @@ h6 {
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
-  padding: 0.625rem 1.25rem;
+  padding: 0.5rem 1rem;
   border: none;
   border-radius: var(--radius-md);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;

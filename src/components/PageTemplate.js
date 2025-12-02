@@ -14,10 +14,10 @@ export default function PageTemplate({
     breadcrumbs,
 }) {
     return (
-        <div style={{ padding: 'var(--spacing-xl)', maxWidth: '1600px', margin: '0 auto' }}>
+        <div style={{ paddingTop: '5px', paddingRight: 'var(--spacing-xl)', paddingBottom: 'var(--spacing-xl)', paddingLeft: 'var(--spacing-xl)', maxWidth: '1600px', margin: '0 auto' }}>
             {/* Breadcrumbs */}
             {breadcrumbs && breadcrumbs.length > 0 && (
-                <div style={{ marginBottom: 'var(--spacing-lg)', display: 'flex', gap: 'var(--spacing-sm)', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                <div style={{ paddingBottom: 'var(--spacing-sm)', marginBottom: 'var(--spacing-sm)', display: 'flex', gap: 'var(--spacing-sm)', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
                     {breadcrumbs.map((crumb, index) => (
                         <span key={index}>
                             {crumb.href ? (
@@ -36,7 +36,7 @@ export default function PageTemplate({
             {/* Filters */}
             {filters && (
                 <div style={{
-                    marginBottom: 'var(--spacing-lg)',
+                    marginBottom: 'var(--spacing-md)',
                     padding: 'var(--spacing-md)',
                     background: 'var(--surface)',
                     borderRadius: 'var(--radius-md)',
@@ -49,7 +49,7 @@ export default function PageTemplate({
             {/* Actions - New Position (between filters and content) */}
             {actions && (
                 <div style={{
-                    marginBottom: 'var(--spacing-lg)',
+                    marginBottom: 'var(--spacing-md)',
                     display: 'flex',
                     gap: 'var(--spacing-md)',
                     justifyContent: 'flex-end',

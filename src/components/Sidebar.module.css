@@ -8,6 +8,8 @@
     border-right: 1px solid var(--border);
     padding: var(--spacing-lg) 0;
     overflow-y: auto;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
     z-index: 40;
 }
 

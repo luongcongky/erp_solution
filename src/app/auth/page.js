@@ -58,7 +58,7 @@ export default function AuthPage() {
         <div style={{
             minHeight: '100vh',
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             justifyContent: 'center',
             background: 'var(--background)',
             padding: 'var(--spacing-lg)',
