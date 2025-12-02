@@ -18,14 +18,6 @@ export default function ProductsPage() {
     });
     const { t, loading: loadingTranslations } = useTranslations();
 
-    useEffect(() => {
-        fetchProducts();
-    }, []);
-
-    useEffect(() => {
-        filterData();
-    }, [products, filters]);
-
     const fetchProducts = async () => {
         // Simulate API call
         setTimeout(() => {
@@ -62,6 +54,14 @@ export default function ProductsPage() {
 
         setFilteredProducts(result);
     };
+
+    useEffect(() => {
+        fetchProducts();
+    }, []);
+
+    useEffect(() => {
+        filterData();
+    }, [products, filters]);
 
     const handleSelectionChange = (ids) => {
         setSelectedIds(ids);

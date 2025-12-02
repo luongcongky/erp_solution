@@ -18,14 +18,6 @@ export default function ExpensesPage() {
     });
     const { t, loading: loadingTranslations } = useTranslations();
 
-    useEffect(() => {
-        fetchExpenses();
-    }, []);
-
-    useEffect(() => {
-        filterData();
-    }, [expenses, filters]);
-
     const fetchExpenses = async () => {
         // Simulate API call
         setTimeout(() => {
@@ -63,6 +55,14 @@ export default function ExpensesPage() {
 
         setFilteredExpenses(result);
     };
+
+    useEffect(() => {
+        fetchExpenses();
+    }, []);
+
+    useEffect(() => {
+        filterData();
+    }, [expenses, filters]);
 
     const handleSelectionChange = (ids) => {
         setSelectedIds(ids);

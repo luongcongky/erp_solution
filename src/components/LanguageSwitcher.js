@@ -16,6 +16,18 @@ export default function LanguageSwitcher({ variant = 'buttons' }) {
     const dropdownRef = useRef(null);
 
     useEffect(() => {
+        const fetchLanguages = async () => {
+            try {
+                const response = await fetch('/api/languages');
+                const result = await response.json();
+                if (result.success) {
+                    setLanguages(result.data);
+                }
+            } catch (error) {
+                console.error('Error fetching languages:', error);
+            }
+        };
+
         fetchLanguages();
 
         // Click outside handler
@@ -28,18 +40,6 @@ export default function LanguageSwitcher({ variant = 'buttons' }) {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
-
-    const fetchLanguages = async () => {
-        try {
-            const response = await fetch('/api/languages');
-            const result = await response.json();
-            if (result.success) {
-                setLanguages(result.data);
-            }
-        } catch (error) {
-            console.error('Error fetching languages:', error);
-        }
-    };
 
     const handleLanguageChange = (newLocale) => {
         console.log('Switching language to:', newLocale);
