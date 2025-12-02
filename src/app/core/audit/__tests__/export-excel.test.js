@@ -12,9 +12,10 @@ const mockWrite = jest.fn();
 const mockClose = jest.fn();
 
 // Setup global window mocks
-global.window = {
-    showSaveFilePicker: mockShowSaveFilePicker,
-};
+// Setup global window mocks
+if (typeof window !== 'undefined') {
+    window.showSaveFilePicker = mockShowSaveFilePicker;
+}
 
 // Mock XLSX library
 jest.mock('xlsx', () => ({
@@ -34,6 +35,11 @@ describe('Audit Export Excel - File Save Location', () => {
     beforeEach(() => {
         // Reset all mocks before each test
         jest.clearAllMocks();
+
+        // Restore window.showSaveFilePicker in case it was deleted
+        if (typeof window !== 'undefined') {
+            window.showSaveFilePicker = mockShowSaveFilePicker;
+        }
 
         // Setup default mock implementations
         mockCreateWritable.mockResolvedValue({
