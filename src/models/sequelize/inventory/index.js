@@ -1,74 +1,86 @@
-// Inventory Models
-import { DataTypes } from 'sequelize';
-import getSequelize from '../../../config/database.js';
+import Item from './Item.js';
+import Warehouse from './Warehouse.js';
+import Location from './Location.js';
+import StockLot from './StockLot.js';
+import StockBalance from './StockBalance.js';
+import StockMovement from './StockMovement.js';
+import UomConversion from './UomConversion.js';
+import InventoryCount from './InventoryCount.js';
+import InventoryCountLine from './InventoryCountLine.js';
 
-const sequelize = getSequelize();
+// --- Associations ---
 
-export const Product = sequelize.define('Product', {
-    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-    sku: { type: DataTypes.STRING(100) },
-    name: { type: DataTypes.STRING(200), allowNull: false },
-    description: { type: DataTypes.TEXT },
-    product_type: { type: DataTypes.STRING(50), defaultValue: 'stockable' },
-    uom: { type: DataTypes.STRING(20), defaultValue: 'pcs' },
-    cost: { type: DataTypes.DECIMAL(18, 4), defaultValue: 0 },
-    price: { type: DataTypes.DECIMAL(18, 4), defaultValue: 0 },
-    barcode: { type: DataTypes.STRING(100) },
-    is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
-    ten_id: { type: DataTypes.STRING(20), allowNull: false },
-    stg_id: { type: DataTypes.STRING(20), defaultValue: 'DEV' },
-}, { tableName: 'products', schema: 'inventory', timestamps: true });
+// 1. Location Hierarchy & Warehouse
+Warehouse.hasMany(Location, { foreignKey: 'warehouse_id', as: 'locations' });
+Location.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
 
-export const Warehouse = sequelize.define('Warehouse', {
-    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-    code: { type: DataTypes.STRING(50), allowNull: false },
-    name: { type: DataTypes.STRING(200), allowNull: false },
-    address: { type: DataTypes.JSONB },
-    ten_id: { type: DataTypes.STRING(20), allowNull: false },
-    stg_id: { type: DataTypes.STRING(20), defaultValue: 'DEV' },
-}, { tableName: 'warehouses', schema: 'inventory', timestamps: true });
+Location.hasMany(Location, { foreignKey: 'parent_location_id', as: 'children' });
+Location.belongsTo(Location, { foreignKey: 'parent_location_id', as: 'parent' });
 
-export const StockQuant = sequelize.define('StockQuant', {
-    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-    product_id: { type: DataTypes.UUID, allowNull: false },
-    warehouse_id: { type: DataTypes.UUID, allowNull: false },
-    lot: { type: DataTypes.STRING(100) },
-    quantity: { type: DataTypes.DECIMAL(18, 4), defaultValue: 0 },
-    reserved: { type: DataTypes.DECIMAL(18, 4), defaultValue: 0 },
-    ten_id: { type: DataTypes.STRING(20), allowNull: false },
-    stg_id: { type: DataTypes.STRING(20), defaultValue: 'DEV' },
-}, { tableName: 'stock_quant', schema: 'inventory', timestamps: true, createdAt: false, updatedAt: 'updated_at' });
+// 2. Stock Lots
+Item.hasMany(StockLot, { foreignKey: 'item_id', as: 'lots' });
+StockLot.belongsTo(Item, { foreignKey: 'item_id', as: 'item' });
 
-export const StockMove = sequelize.define('StockMove', {
-    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-    product_id: { type: DataTypes.UUID, allowNull: false },
-    from_warehouse: { type: DataTypes.UUID },
-    to_warehouse: { type: DataTypes.UUID },
-    quantity: { type: DataTypes.DECIMAL(18, 4), allowNull: false },
-    uom: { type: DataTypes.STRING(20), defaultValue: 'pcs' },
-    move_type: { type: DataTypes.STRING(50) },
-    reference: { type: DataTypes.STRING(100) },
-    lot: { type: DataTypes.STRING(100) },
-    ten_id: { type: DataTypes.STRING(20), allowNull: false },
-    stg_id: { type: DataTypes.STRING(20), defaultValue: 'DEV' },
-}, { tableName: 'stock_moves', schema: 'inventory', timestamps: true, createdAt: 'created_at', updatedAt: false });
+// 3. Stock Balances
+Item.hasMany(StockBalance, { foreignKey: 'item_id', as: 'balances' });
+StockBalance.belongsTo(Item, { foreignKey: 'item_id', as: 'item' });
 
-export const StockAdjustment = sequelize.define('StockAdjustment', {
-    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-    name: { type: DataTypes.STRING(100), allowNull: false, unique: true },
-    warehouse_id: { type: DataTypes.UUID },
-    adjustment_date: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
-    reason: { type: DataTypes.TEXT },
-    status: { type: DataTypes.STRING(50), defaultValue: 'draft' },
-    ten_id: { type: DataTypes.STRING(20), allowNull: false },
-    stg_id: { type: DataTypes.STRING(20), defaultValue: 'DEV' },
-}, { tableName: 'stock_adjustments', schema: 'inventory', timestamps: true });
+Warehouse.hasMany(StockBalance, { foreignKey: 'warehouse_id', as: 'balances' });
+StockBalance.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
 
-export const StockAdjustmentLine = sequelize.define('StockAdjustmentLine', {
-    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-    adjustment_id: { type: DataTypes.UUID, allowNull: false },
-    product_id: { type: DataTypes.UUID },
-    lot: { type: DataTypes.STRING(100) },
-    counted_qty: { type: DataTypes.DECIMAL(18, 4) },
-    system_qty: { type: DataTypes.DECIMAL(18, 4) },
-}, { tableName: 'stock_adjustment_lines', schema: 'inventory', timestamps: false });
+Location.hasMany(StockBalance, { foreignKey: 'location_id', as: 'balances' });
+StockBalance.belongsTo(Location, { foreignKey: 'location_id', as: 'location' });
+
+StockLot.hasMany(StockBalance, { foreignKey: 'lot_id', as: 'balances' });
+StockBalance.belongsTo(StockLot, { foreignKey: 'lot_id', as: 'lot' });
+
+// 4. Stock Movements
+Item.hasMany(StockMovement, { foreignKey: 'item_id', as: 'movements' });
+StockMovement.belongsTo(Item, { foreignKey: 'item_id', as: 'item' });
+
+Warehouse.hasMany(StockMovement, { foreignKey: 'from_warehouse_id', as: 'outgoing_movements' });
+StockMovement.belongsTo(Warehouse, { foreignKey: 'from_warehouse_id', as: 'from_warehouse' });
+
+Warehouse.hasMany(StockMovement, { foreignKey: 'to_warehouse_id', as: 'incoming_movements' });
+StockMovement.belongsTo(Warehouse, { foreignKey: 'to_warehouse_id', as: 'to_warehouse' });
+
+Location.hasMany(StockMovement, { foreignKey: 'from_location_id', as: 'outgoing_location_movements' });
+StockMovement.belongsTo(Location, { foreignKey: 'from_location_id', as: 'from_location' });
+
+Location.hasMany(StockMovement, { foreignKey: 'to_location_id', as: 'incoming_location_movements' });
+StockMovement.belongsTo(Location, { foreignKey: 'to_location_id', as: 'to_location' });
+
+StockLot.hasMany(StockMovement, { foreignKey: 'lot_id', as: 'movements' });
+StockMovement.belongsTo(StockLot, { foreignKey: 'lot_id', as: 'lot' });
+
+// 5. UOM Conversions
+Item.hasMany(UomConversion, { foreignKey: 'item_id', as: 'uom_conversions' });
+UomConversion.belongsTo(Item, { foreignKey: 'item_id', as: 'item' });
+
+// 6. Inventory Counts
+Warehouse.hasMany(InventoryCount, { foreignKey: 'warehouse_id', as: 'inventory_counts' });
+InventoryCount.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
+
+InventoryCount.hasMany(InventoryCountLine, { foreignKey: 'inventory_count_id', as: 'lines' });
+InventoryCountLine.belongsTo(InventoryCount, { foreignKey: 'inventory_count_id', as: 'count' });
+
+Item.hasMany(InventoryCountLine, { foreignKey: 'item_id', as: 'inventory_count_lines' });
+InventoryCountLine.belongsTo(Item, { foreignKey: 'item_id', as: 'item' });
+
+Location.hasMany(InventoryCountLine, { foreignKey: 'location_id', as: 'inventory_count_lines' });
+InventoryCountLine.belongsTo(Location, { foreignKey: 'location_id', as: 'location' });
+
+StockLot.hasMany(InventoryCountLine, { foreignKey: 'lot_id', as: 'inventory_count_lines' });
+InventoryCountLine.belongsTo(StockLot, { foreignKey: 'lot_id', as: 'lot' });
+
+export {
+    Item,
+    Warehouse,
+    Location,
+    StockLot,
+    StockBalance,
+    StockMovement,
+    UomConversion,
+    InventoryCount,
+    InventoryCountLine
+};

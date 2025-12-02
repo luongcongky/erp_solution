@@ -88,12 +88,15 @@ const models = {
     SupplierEvaluation: PurchaseModels.SupplierEvaluation,
 
     // Inventory
-    InventoryProduct: InventoryModels.Product,
+    Item: InventoryModels.Item,
     Warehouse: InventoryModels.Warehouse,
-    StockQuant: InventoryModels.StockQuant,
-    StockMove: InventoryModels.StockMove,
-    StockAdjustment: InventoryModels.StockAdjustment,
-    StockAdjustmentLine: InventoryModels.StockAdjustmentLine,
+    Location: InventoryModels.Location,
+    StockLot: InventoryModels.StockLot,
+    StockBalance: InventoryModels.StockBalance,
+    StockMovement: InventoryModels.StockMovement,
+    UomConversion: InventoryModels.UomConversion,
+    InventoryCount: InventoryModels.InventoryCount,
+    InventoryCountLine: InventoryModels.InventoryCountLine,
 
     // Manufacturing
     BOM: ManufacturingModels.BOM,
@@ -163,7 +166,8 @@ export function setupAssociations() {
         User, Role, UserRole, Permission, Partner, Employee, Department,
         Lead, Opportunity, Quotation, QuotationLine, SalesOrder, SalesOrderLine, CustomerActivity,
         PurchaseRequest, PurchaseRequestLine, RFQ, RFQLine, PurchaseOrder, PurchaseOrderLine,
-        InventoryProduct, Warehouse, StockQuant, StockMove, StockAdjustment, StockAdjustmentLine,
+        // Inventory models are now self-associated in their index.js
+        Item, // Added Item here
         BOM, BOMLine, Routing, RoutingStep, WorkOrder, WorkOrderLine, QualityCheck,
         Account, Journal, JournalEntry, JournalItem, Invoice, InvoiceLine, Payment,
         Contract, Attendance, Leave, LeaveType, PayrollRun, PayrollLine, KPI,
@@ -206,25 +210,18 @@ export function setupAssociations() {
     PurchaseOrder.hasMany(PurchaseOrderLine, { foreignKey: 'purchase_id' });
     PurchaseOrderLine.belongsTo(PurchaseOrder, { foreignKey: 'purchase_id' });
 
-    // Inventory relationships
-    StockQuant.belongsTo(InventoryProduct, { foreignKey: 'product_id' });
-    StockQuant.belongsTo(Warehouse, { foreignKey: 'warehouse_id' });
-    StockMove.belongsTo(InventoryProduct, { foreignKey: 'product_id' });
-    StockMove.belongsTo(Warehouse, { as: 'fromWarehouse', foreignKey: 'from_warehouse' });
-    StockMove.belongsTo(Warehouse, { as: 'toWarehouse', foreignKey: 'to_warehouse' });
-    StockAdjustment.belongsTo(Warehouse, { foreignKey: 'warehouse_id' });
-    StockAdjustment.hasMany(StockAdjustmentLine, { foreignKey: 'adjustment_id' });
-    StockAdjustmentLine.belongsTo(StockAdjustment, { foreignKey: 'adjustment_id' });
+    // Inventory relationships - MOVED TO inventory/index.js
+    // We keep this block empty or use it for cross-module associations if needed later.
 
     // Manufacturing relationships
-    BOM.belongsTo(InventoryProduct, { foreignKey: 'product_id' });
+    BOM.belongsTo(Item, { foreignKey: 'product_id' });
     BOM.hasMany(BOMLine, { foreignKey: 'bom_id' });
     BOMLine.belongsTo(BOM, { foreignKey: 'bom_id' });
-    BOMLine.belongsTo(InventoryProduct, { foreignKey: 'product_id' });
-    Routing.belongsTo(InventoryProduct, { foreignKey: 'product_id' });
+    BOMLine.belongsTo(Item, { foreignKey: 'product_id' });
+    Routing.belongsTo(Item, { foreignKey: 'product_id' });
     Routing.hasMany(RoutingStep, { foreignKey: 'routing_id' });
     RoutingStep.belongsTo(Routing, { foreignKey: 'routing_id' });
-    WorkOrder.belongsTo(InventoryProduct, { foreignKey: 'product_id' });
+    WorkOrder.belongsTo(Item, { foreignKey: 'product_id' });
     WorkOrder.belongsTo(BOM, { foreignKey: 'bom_id' });
     WorkOrder.hasMany(WorkOrderLine, { foreignKey: 'work_order_id' });
     WorkOrderLine.belongsTo(WorkOrder, { foreignKey: 'work_order_id' });
@@ -278,7 +275,7 @@ export function setupAssociations() {
     // Service relationships
     Ticket.belongsTo(Partner, { as: 'customer', foreignKey: 'customer_id' });
     Ticket.belongsTo(Employee, { as: 'assignedEmployee', foreignKey: 'assignee' });
-    Warranty.belongsTo(InventoryProduct, { foreignKey: 'product_id' });
+    Warranty.belongsTo(Item, { foreignKey: 'product_id' });
     Warranty.belongsTo(Partner, { as: 'customer', foreignKey: 'customer_id' });
     MaintenanceLog.belongsTo(Ticket, { foreignKey: 'ticket_id' });
     MaintenanceLog.belongsTo(Warranty, { foreignKey: 'warranty_id' });
