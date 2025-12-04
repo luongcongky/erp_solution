@@ -138,8 +138,10 @@ export function AuthProvider({ children }) {
 
         const isAuthPage = pathname === '/auth';
         const isPublicPage = pathname === '/api-docs' || pathname.startsWith('/api-docs');
+        // Exclude all API routes from authentication checks
+        const isApiRoute = pathname.startsWith('/api/');
 
-        if (!user && !isAuthPage && !isPublicPage) {
+        if (!user && !isAuthPage && !isPublicPage && !isApiRoute) {
             router.push('/auth');
         } else if (user && isAuthPage) {
             router.push('/');
