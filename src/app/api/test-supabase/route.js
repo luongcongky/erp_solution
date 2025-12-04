@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { db, client } from '@/db';
 import { sql } from 'drizzle-orm';
+import dns from 'dns';
+import { promisify } from 'util';
+
+const lookup = promisify(dns.lookup);
 
 /**
  * @swagger
@@ -24,10 +28,37 @@ export async function GET() {
         environment: process.env.NODE_ENV || 'development',
         checks: {},
         connectionInfo: {},
+        dnsInfo: {}, // Added DNS info
         error: null
     };
 
     try {
+        // 0. Test DNS Resolution first
+        console.log('[Supabase Test] Testing DNS resolution...');
+        const dbUrl = process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL;
+        if (dbUrl) {
+            try {
+                const match = dbUrl.match(/@([^:]+):/);
+                if (match) {
+                    const host = match[1];
+                    results.dnsInfo.host = host;
+                    const { address, family } = await lookup(host);
+                    results.dnsInfo.address = address;
+                    results.dnsInfo.family = family;
+                    results.checks.dns = {
+                        status: 'success',
+                        message: `Resolved to ${address} (IPv${family})`
+                    };
+                }
+            } catch (e) {
+                results.dnsInfo.error = e.message;
+                results.checks.dns = {
+                    status: 'error',
+                    message: `DNS Lookup failed: ${e.message}`
+                };
+            }
+        }
+
         // 1. Test basic connection
         console.log('[Supabase Test] Testing connection...');
         const connectionTest = await client.query('SELECT 1 as test');
