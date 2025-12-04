@@ -1,5 +1,6 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
+import dns from 'dns';
 
 const { Pool } = pg;
 
@@ -17,6 +18,11 @@ const pool = new Pool({
     max: 10,
     idleTimeoutMillis: 20000,
     connectionTimeoutMillis: 10000,
+    // Explicitly pass lookup to fix ENOTFOUND on Vercel
+    // @ts-ignore - lookup is supported by pg but missing in types
+    lookup: (hostname, options, callback) => {
+        dns.lookup(hostname, options, callback);
+    },
 });
 
 // Create drizzle instance
