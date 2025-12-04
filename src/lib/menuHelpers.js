@@ -45,15 +45,22 @@ export function flattenMenuTree(menuTree, result = []) {
  * @returns {Array} Filtered menu items
  */
 export function filterMenuByRole(menuItems, userRole) {
-    if (!userRole) return [];
+    // If no role provided, only show public menus (menus without role restrictions)
+    if (!userRole) {
+        return menuItems.filter(item => !item.roles || item.roles.length === 0);
+    }
+
+    // Handle multiple roles (comma-separated string like "Admin, User")
+    const userRoles = userRole.split(',').map(r => r.trim().toLowerCase());
 
     return menuItems.filter(item => {
         // If roles array is empty or not defined, show to everyone
         if (!item.roles || item.roles.length === 0) {
             return true;
         }
-        // Check if user role is in the allowed roles
-        return item.roles.includes(userRole);
+        // Check if any user role matches any of the allowed roles (case-insensitive)
+        const itemRoles = item.roles.map(r => r.toLowerCase());
+        return userRoles.some(ur => itemRoles.includes(ur));
     });
 }
 

@@ -124,7 +124,7 @@ export default function AuthPage() {
                         gap: 'var(--spacing-lg)',
                     }}>
                         <div>
-                            <label style={{
+                            <label htmlFor="email" style={{
                                 display: 'block',
                                 marginBottom: 'var(--spacing-sm)',
                                 color: 'var(--text-secondary)',
@@ -134,6 +134,7 @@ export default function AuthPage() {
                                 {t('pages.auth.emailLabel', 'Email')}
                             </label>
                             <input
+                                id="email"
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -143,8 +144,9 @@ export default function AuthPage() {
                             />
                         </div>
 
+
                         <div>
-                            <label style={{
+                            <label htmlFor="password" style={{
                                 display: 'block',
                                 marginBottom: 'var(--spacing-sm)',
                                 color: 'var(--text-secondary)',
@@ -154,6 +156,7 @@ export default function AuthPage() {
                                 {t('pages.auth.passwordLabel', 'Mật khẩu')}
                             </label>
                             <input
+                                id="password"
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -162,6 +165,7 @@ export default function AuthPage() {
                                 placeholder={t('pages.auth.passwordPlaceholder', '••••••••')}
                             />
                         </div>
+
 
                         <button
                             type="submit"

@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { sequelize } from '@/models/sequelize/index.js';
+import { db } from '@/db';
+import { users, userRoles, roles } from '@/db/schema/core';
+import { eq, and, ne, sql } from 'drizzle-orm';
+import bcrypt from 'bcrypt';
 
 /**
  * @swagger
@@ -52,6 +55,9 @@ export async function PUT(request, { params }) {
         const body = await request.json();
         const { email, firstName, lastName, password, roleIds = [], isActive } = body;
 
+        const ten_id = request.headers.get('x-tenant-id') || '1000';
+        const stg_id = request.headers.get('x-stage-id') || 'DEV';
+
         if (!id) {
             return NextResponse.json(
                 { success: false, error: 'User ID is required' },
@@ -60,32 +66,41 @@ export async function PUT(request, { params }) {
         }
 
         // Check if user exists
-        const [existingUser] = await sequelize.query(
-            `SELECT id, email FROM "core"."users" WHERE id = :id`,
-            {
-                replacements: { id },
-                type: sequelize.QueryTypes.SELECT
-            }
-        );
+        const existingUser = await db
+            .select({ id: users.id, email: users.email })
+            .from(users)
+            .where(
+                and(
+                    eq(users.id, id),
+                    eq(users.tenId, ten_id),
+                    eq(users.stgId, stg_id)
+                )
+            )
+            .limit(1);
 
-        if (!existingUser) {
+        if (!existingUser || existingUser.length === 0) {
             return NextResponse.json(
                 { success: false, error: 'User not found' },
                 { status: 404 }
             );
         }
 
-        // Check email uniqueness (excluding current user)
-        if (email && email !== existingUser.email) {
-            const [emailCheck] = await sequelize.query(
-                `SELECT id FROM "core"."users" WHERE email = :email AND id != :id`,
-                {
-                    replacements: { email, id },
-                    type: sequelize.QueryTypes.SELECT
-                }
-            );
+        // Check email uniqueness (excluding current user) within the same tenant
+        if (email && email !== existingUser[0].email) {
+            const emailCheck = await db
+                .select({ id: users.id })
+                .from(users)
+                .where(
+                    and(
+                        eq(users.email, email),
+                        ne(users.id, id),
+                        eq(users.tenId, ten_id),
+                        eq(users.stgId, stg_id)
+                    )
+                )
+                .limit(1);
 
-            if (emailCheck) {
+            if (emailCheck && emailCheck.length > 0) {
                 return NextResponse.json(
                     { success: false, error: 'Email already exists' },
                     { status: 400 }
@@ -93,71 +108,76 @@ export async function PUT(request, { params }) {
             }
         }
 
-        // Build update query
-        let updateFields = [];
-        let replacements = { id };
+        // Build update data
+        const updateData = {};
 
-        if (email) {
-            updateFields.push('"email" = :email');
-            replacements.email = email;
-        }
-        if (firstName) {
-            updateFields.push('"firstName" = :firstName');
-            replacements.firstName = firstName;
-        }
-        if (lastName !== undefined) {
-            updateFields.push('"lastName" = :lastName');
-            replacements.lastName = lastName;
-        }
-        if (isActive !== undefined) {
-            updateFields.push('"isActive" = :isActive');
-            replacements.isActive = isActive;
-        }
+        if (email) updateData.email = email;
+        if (firstName) updateData.firstName = firstName;
+        if (lastName !== undefined) updateData.lastName = lastName;
+        if (isActive !== undefined) updateData.isActive = isActive;
         if (password) {
-            const bcrypt = require('bcrypt');
             const hashedPassword = await bcrypt.hash(password, 10);
-            updateFields.push('"password" = :password');
-            replacements.password = hashedPassword;
+            updateData.password = hashedPassword;
         }
 
-        updateFields.push('"updatedAt" = NOW()');
+        updateData.updatedAt = new Date();
 
         // Update user
-        await sequelize.query(
-            `UPDATE "core"."users" SET ${updateFields.join(', ')} WHERE id = :id`,
-            { replacements }
-        );
+        await db
+            .update(users)
+            .set(updateData)
+            .where(
+                and(
+                    eq(users.id, id),
+                    eq(users.tenId, ten_id),
+                    eq(users.stgId, stg_id)
+                )
+            );
 
         // Update roles
         // First, delete existing role assignments
-        await sequelize.query(
-            `DELETE FROM "core"."user_roles" WHERE user_id = :id AND ten_id = '1000' AND stg_id = 'DEV'`,
-            { replacements: { id } }
-        );
+        await db
+            .delete(userRoles)
+            .where(
+                and(
+                    eq(userRoles.userId, id),
+                    eq(userRoles.tenId, ten_id),
+                    eq(userRoles.stgId, stg_id)
+                )
+            );
 
         // Then, insert new role assignments
         if (roleIds.length > 0) {
-            const roleValues = roleIds.map(roleId =>
-                `('${id}', '${roleId}', '1000', 'DEV', NOW(), NOW())`
-            ).join(',');
+            const roleAssignments = roleIds.map(roleId => ({
+                userId: id,
+                roleId: roleId,
+                tenId: ten_id,
+                stgId: stg_id,
+            }));
 
-            await sequelize.query(
-                `INSERT INTO "core"."user_roles" (user_id, role_id, ten_id, stg_id, "createdAt", "updatedAt")
-                 VALUES ${roleValues}`
-            );
+            await db.insert(userRoles).values(roleAssignments);
         }
 
         // Fetch updated user
-        const [updatedUser] = await sequelize.query(
-            `SELECT id, email, "firstName", "lastName", "isActive" 
-             FROM "core"."users" WHERE id = :id`,
-            {
-                replacements: { id },
-                type: sequelize.QueryTypes.SELECT
-            }
-        );
+        const updatedUser = await db
+            .select({
+                id: users.id,
+                email: users.email,
+                firstName: users.firstName,
+                lastName: users.lastName,
+                isActive: users.isActive,
+            })
+            .from(users)
+            .where(
+                and(
+                    eq(users.id, id),
+                    eq(users.tenId, ten_id),
+                    eq(users.stgId, stg_id)
+                )
+            )
+            .limit(1);
 
-        return NextResponse.json({ success: true, data: updatedUser });
+        return NextResponse.json({ success: true, data: updatedUser[0] });
     } catch (error) {
         console.error('[API] Error updating user:', error);
         return NextResponse.json(
@@ -169,12 +189,12 @@ export async function PUT(request, { params }) {
 
 /**
  * @swagger
- * /api/users/{id}/roles:
+ * /api/users/{id}:
  *   get:
  *     tags:
  *       - Users
- *     summary: Get user roles
- *     description: Get all roles assigned to a specific user
+ *     summary: Get user profile
+ *     description: Get user profile with aggregated roles
  *     parameters:
  *       - in: path
  *         name: id
@@ -183,7 +203,7 @@ export async function PUT(request, { params }) {
  *           type: string
  *     responses:
  *       200:
- *         description: User roles retrieved successfully
+ *         description: User profile retrieved successfully
  *       404:
  *         description: User not found
  *       500:
@@ -193,6 +213,9 @@ export async function GET(request, { params }) {
     try {
         const { id } = await params;
 
+        const ten_id = request.headers.get('x-tenant-id') || '1000';
+        const stg_id = request.headers.get('x-stage-id') || 'DEV';
+
         if (!id) {
             return NextResponse.json(
                 { success: false, error: 'User ID is required' },
@@ -200,21 +223,42 @@ export async function GET(request, { params }) {
             );
         }
 
-        // Fetch user's roles
-        const [roles] = await sequelize.query(
-            `SELECT r.id, r.name, r.description
-             FROM "core"."roles" r
-             JOIN "core"."user_roles" ur ON r.id = ur.role_id
-             WHERE ur.user_id = :userId`,
-            {
-                replacements: { userId: id },
-                type: sequelize.QueryTypes.SELECT
-            }
-        );
+        // Fetch user with aggregated roles using raw SQL (complex aggregation)
+        const userResult = await db.execute(sql`
+            SELECT 
+                u.id,
+                u.email,
+                u.first_name as "firstName",
+                u.last_name as "lastName",
+                u.is_active as "isActive",
+                u.created_at as "createdAt",
+                CONCAT(u.first_name, ' ', u.last_name) as name,
+                COALESCE(
+                    (SELECT STRING_AGG(r.name, ', ')
+                     FROM "core"."user_roles" ur
+                     JOIN "core"."roles" r ON ur.role_id = r.id
+                     WHERE ur.user_id = u.id AND ur.ten_id = ${ten_id} AND ur.stg_id = ${stg_id}),
+                    'No Role'
+                ) as role,
+                CASE 
+                    WHEN u.is_active = true THEN 'active'
+                    ELSE 'inactive'
+                END as status,
+                u.created_at as "lastLogin"
+            FROM "core"."users" u
+            WHERE u.id = ${id} AND u.ten_id = ${ten_id} AND u.stg_id = ${stg_id}
+        `);
 
-        return NextResponse.json({ success: true, data: roles || [] });
+        if (!userResult.rows || userResult.rows.length === 0) {
+            return NextResponse.json(
+                { success: false, error: 'User not found' },
+                { status: 404 }
+            );
+        }
+
+        return NextResponse.json({ success: true, data: userResult.rows[0] });
     } catch (error) {
-        console.error('[API] Error fetching user roles:', error);
+        console.error('[API] Error fetching user:', error);
         return NextResponse.json(
             { success: false, error: error.message },
             { status: 500 }

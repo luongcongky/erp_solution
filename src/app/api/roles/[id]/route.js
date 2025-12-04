@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import models, { sequelize } from '@/models/sequelize/index.js';
-
-const { Role } = models;
+import { db } from '@/db';
+import { roles, userRoles } from '@/db/schema/core';
+import { eq, and, sql } from 'drizzle-orm';
 
 /**
  * @swagger
@@ -11,26 +11,12 @@ const { Role } = models;
  *       - Roles
  *     summary: Delete a role
  *     description: Delete a role by ID. Cannot delete if users are assigned.
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Role ID
- *     responses:
- *       200:
- *         description: Role deleted successfully
- *       400:
- *         description: Cannot delete role with assigned users
- *       404:
- *         description: Role not found
- *       500:
- *         description: Internal server error
  */
 export async function DELETE(request, { params }) {
     try {
         const { id } = await params;
+        const ten_id = request.headers.get('x-tenant-id') || '1000';
+        const stg_id = request.headers.get('x-stage-id') || 'DEV';
 
         if (!id) {
             return NextResponse.json(
@@ -40,26 +26,37 @@ export async function DELETE(request, { params }) {
         }
 
         // Check if role has users
-        const [countResult] = await sequelize.query(
-            `SELECT COUNT(*) as count FROM "core"."user_roles" WHERE role_id = :roleId AND ten_id = '1000' AND stg_id = 'DEV'`,
-            {
-                replacements: { roleId: id },
-                type: sequelize.QueryTypes.SELECT
-            }
-        );
+        const [countResult] = await db
+            .select({ count: sql`count(*)` })
+            .from(userRoles)
+            .where(
+                and(
+                    eq(userRoles.roleId, id),
+                    eq(userRoles.tenId, ten_id),
+                    eq(userRoles.stgId, stg_id)
+                )
+            );
 
-        if (countResult && parseInt(countResult.count) > 0) {
+        if (countResult && Number(countResult.count) > 0) {
             return NextResponse.json(
                 { success: false, error: 'Cannot delete role that has assigned users. Please remove all users from this role first.' },
                 { status: 400 }
             );
         }
 
-        const deleted = await Role.destroy({
-            where: { id }
-        });
+        // Delete role
+        const [deletedRole] = await db
+            .delete(roles)
+            .where(
+                and(
+                    eq(roles.id, id),
+                    eq(roles.tenId, ten_id),
+                    eq(roles.stgId, stg_id)
+                )
+            )
+            .returning();
 
-        if (!deleted) {
+        if (!deletedRole) {
             return NextResponse.json(
                 { success: false, error: 'Role not found' },
                 { status: 404 }
@@ -83,51 +80,41 @@ export async function DELETE(request, { params }) {
  *     tags:
  *       - Roles
  *     summary: Update a role
- *     description: Update role details
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               description:
- *                 type: string
- *     responses:
- *       200:
- *         description: Role updated successfully
- *       404:
- *         description: Role not found
  */
 export async function PUT(request, { params }) {
     try {
         const { id } = await params;
         const body = await request.json();
         const { name, description } = body;
+        const ten_id = request.headers.get('x-tenant-id') || '1000';
+        const stg_id = request.headers.get('x-stage-id') || 'DEV';
 
         if (!id) {
             return NextResponse.json({ success: false, error: 'Role ID is required' }, { status: 400 });
         }
 
-        const role = await Role.findByPk(id);
-        if (!role) {
+        // Update role
+        const [updatedRole] = await db
+            .update(roles)
+            .set({
+                name,
+                description,
+                updatedAt: new Date()
+            })
+            .where(
+                and(
+                    eq(roles.id, id),
+                    eq(roles.tenId, ten_id),
+                    eq(roles.stgId, stg_id)
+                )
+            )
+            .returning();
+
+        if (!updatedRole) {
             return NextResponse.json({ success: false, error: 'Role not found' }, { status: 404 });
         }
 
-        await role.update({
-            name,
-            description
-        });
-
-        return NextResponse.json({ success: true, data: role });
+        return NextResponse.json({ success: true, data: updatedRole });
     } catch (error) {
         console.error('[API] Error updating role:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });

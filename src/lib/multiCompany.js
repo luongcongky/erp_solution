@@ -1,7 +1,3 @@
-import models, { initializeDatabase } from '@/models/sequelize/index.js';
-
-const { Company } = models;
-
 /**
  * Extract company domain from email address
  * @param {string} email - User email address
@@ -20,6 +16,9 @@ export function getEmailDomain(email) {
 
 /**
  * Get company by email domain
+ * Returns default company context since actual tenant info (ten_id, stg_id) 
+ * is stored in the user record and will be retrieved during login.
+ * 
  * @param {string} email - User email address
  * @returns {Promise<Object>} - Company object with ten_id and stg_id
  */
@@ -27,32 +26,13 @@ export async function getCompanyByEmail(email) {
     try {
         const domain = getEmailDomain(email);
 
-        // Initialize database before querying
-        await initializeDatabase();
-
-        // Find company by domain using Sequelize
-        const company = await Company.findOne({
-            where: {
-                domain: domain,
-                isActive: true
-            }
-        });
-
-        if (!company) {
-            // Return default company if no specific company found
-            return {
-                ten_id: '1000',
-                stg_id: 'DEV',
-                name: 'Default Company',
-                domain: domain
-            };
-        }
-
+        // Return default company context
+        // Actual tenant info (ten_id, stg_id) comes from user record
         return {
-            ten_id: company.ten_id,
-            stg_id: company.stg_id,
-            name: company.name,
-            domain: company.domain
+            ten_id: '1000',
+            stg_id: 'DEV',
+            name: 'Default Company',
+            domain: domain
         };
     } catch (error) {
         console.error('[multiCompany] Error in getCompanyByEmail:', error);

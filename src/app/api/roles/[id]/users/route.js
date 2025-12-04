@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { sequelize } from '@/models/sequelize/index.js';
+import { db } from '@/db';
+import { users, userRoles } from '@/db/schema/core';
+import { eq, and, asc } from 'drizzle-orm';
 
 /**
  * @swagger
@@ -19,23 +21,15 @@ import { sequelize } from '@/models/sequelize/index.js';
  *     responses:
  *       200:
  *         description: Successfully retrieved users
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/User'
  *       500:
  *         description: Internal server error
  */
 export async function GET(request, { params }) {
     try {
         const { id } = await params;
+
+        const ten_id = request.headers.get('x-tenant-id') || '1000';
+        const stg_id = request.headers.get('x-stage-id') || 'DEV';
 
         if (!id) {
             return NextResponse.json(
@@ -44,18 +38,28 @@ export async function GET(request, { params }) {
             );
         }
 
-        const [users] = await sequelize.query(
-            `SELECT u.id, u.email, u."firstName", u."lastName", u."isActive", u."createdAt"
-             FROM "core"."users" u
-             JOIN "core"."user_roles" ur ON u.id = ur.user_id
-             WHERE ur.role_id = :roleId AND ur.ten_id = '1000' AND ur.stg_id = 'DEV'
-             ORDER BY u."firstName" ASC, u."lastName" ASC`,
-            {
-                replacements: { roleId: id }
-            }
-        );
+        // Get users with this role using join
+        const usersWithRole = await db
+            .select({
+                id: users.id,
+                email: users.email,
+                firstName: users.firstName,
+                lastName: users.lastName,
+                isActive: users.isActive,
+                createdAt: users.createdAt,
+            })
+            .from(users)
+            .innerJoin(userRoles, eq(users.id, userRoles.userId))
+            .where(
+                and(
+                    eq(userRoles.roleId, id),
+                    eq(userRoles.tenId, ten_id),
+                    eq(userRoles.stgId, stg_id)
+                )
+            )
+            .orderBy(asc(users.firstName), asc(users.lastName));
 
-        return NextResponse.json({ success: true, data: users });
+        return NextResponse.json({ success: true, data: usersWithRole });
     } catch (error) {
         console.error('[API] Error fetching role users:', error);
         return NextResponse.json(

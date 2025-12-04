@@ -1,20 +1,20 @@
 import { NextResponse } from 'next/server';
-import { initializeDatabase } from '../../../models/sequelize/index.js';
-import models from '../../../models/sequelize/index.js';
+import { db } from '@/db';
+import { menus } from '@/db/schema/core';
+import { sql } from 'drizzle-orm';
 
 export async function GET() {
     try {
-        // Initialize database
-        await initializeDatabase();
+        // Test database connection by counting menus
+        const result = await db
+            .select({ count: sql < number > `count(*)` })
+            .from(menus);
 
-        const { Menu } = models;
-
-        // Test query
-        const count = await Menu.count();
+        const count = Number(result[0]?.count || 0);
 
         return NextResponse.json({
             success: true,
-            message: 'PostgreSQL connected successfully',
+            message: 'PostgreSQL connected successfully (Drizzle ORM)',
             menuCount: count,
         });
     } catch (error) {

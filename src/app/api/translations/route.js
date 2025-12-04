@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import models, { sequelize } from '@/models/sequelize/index.js';
-import { Op } from 'sequelize';
+import { db } from '@/db';
+import { uiTranslations } from '@/db/schema/core';
+import { eq, and, or, ilike, sql } from 'drizzle-orm';
 
-const { UITranslation } = models;
+
 
 /**
  * @swagger
@@ -109,29 +110,35 @@ export async function GET(request) {
         const module = searchParams.get('module');
         const search = searchParams.get('search');
 
-        // Build where clause for filtering
-        const where = {
-            ten_id: '1000',
-            stg_id: 'DEV'
-        };
+        const ten_id = '1000';
+        const stg_id = 'DEV';
+
+        // Build where conditions
+        const conditions = [
+            eq(uiTranslations.tenId, ten_id),
+            eq(uiTranslations.stgId, stg_id)
+        ];
 
         if (module && module !== 'all') {
-            where.module = module;
+            conditions.push(eq(uiTranslations.module, module));
         }
 
         if (search) {
-            where[Op.or] = [
-                { key: { [Op.iLike]: `%${search}%` } },
-                { value: { [Op.iLike]: `%${search}%` } }
-            ];
+            conditions.push(
+                or(
+                    ilike(uiTranslations.key, `%${search}%`),
+                    ilike(uiTranslations.value, `%${search}%`)
+                )
+            );
         }
 
-        // First, get all translations with filters
-        const allTranslations = await UITranslation.findAll({
-            where,
-            order: [['key', 'ASC'], ['languageCode', 'ASC']],
-            raw: true
-        });
+        // Get all translations with filters
+        const allTranslations = await db
+            .select()
+            .from(uiTranslations)
+            .where(and(...conditions))
+            .orderBy(uiTranslations.key);
+
 
         // Group by key
         const groupedByKey = {};
@@ -140,14 +147,11 @@ export async function GET(request) {
                 groupedByKey[row.key] = {
                     key: row.key,
                     module: row.module,
-                    description: row.description,
                     translations: {}
                 };
             }
-            // Use language_code (underscored) as that's what Sequelize returns with raw: true
-            const langCode = row.language_code || row.languageCode;
-            if (langCode) {
-                groupedByKey[row.key].translations[langCode] = row.value;
+            if (row.locale) {
+                groupedByKey[row.key].translations[row.locale] = row.value;
             }
         });
 
@@ -187,7 +191,7 @@ export async function GET(request) {
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { key, module, description, translations } = body;
+        const { key, module, translations } = body;
 
         if (!key || !translations) {
             return NextResponse.json(
@@ -201,17 +205,19 @@ export async function POST(request) {
 
         // Insert translation for each language
         const records = [];
-        for (const [langCode, value] of Object.entries(translations)) {
+        for (const [locale, value] of Object.entries(translations)) {
             if (value) {
-                const record = await UITranslation.create({
-                    key,
-                    languageCode: langCode,
-                    value,
-                    module: module || null,
-                    description: description || null,
-                    ten_id,
-                    stg_id
-                });
+                const [record] = await db
+                    .insert(uiTranslations)
+                    .values({
+                        key,
+                        locale,
+                        value,
+                        module: module || null,
+                        tenId: ten_id,
+                        stgId: stg_id
+                    })
+                    .returning();
                 records.push(record);
             }
         }
@@ -234,7 +240,7 @@ export async function POST(request) {
 export async function PUT(request) {
     try {
         const body = await request.json();
-        const { key, module, description, translations } = body;
+        const { key, module, translations } = body;
 
         if (!key || !translations) {
             return NextResponse.json(
@@ -248,17 +254,48 @@ export async function PUT(request) {
 
         // Update or create translation for each language
         const records = [];
-        for (const [langCode, value] of Object.entries(translations)) {
+        for (const [locale, value] of Object.entries(translations)) {
             if (value) {
-                const [record] = await UITranslation.upsert({
-                    key,
-                    languageCode: langCode,
-                    value,
-                    module: module || null,
-                    description: description || null,
-                    ten_id,
-                    stg_id
-                });
+                // Check if record exists
+                const existing = await db
+                    .select()
+                    .from(uiTranslations)
+                    .where(
+                        and(
+                            eq(uiTranslations.key, key),
+                            eq(uiTranslations.locale, locale),
+                            eq(uiTranslations.tenId, ten_id),
+                            eq(uiTranslations.stgId, stg_id)
+                        )
+                    )
+                    .limit(1);
+
+                let record;
+                if (existing.length > 0) {
+                    // Update existing
+                    [record] = await db
+                        .update(uiTranslations)
+                        .set({
+                            value,
+                            module: module || null,
+                            updatedAt: new Date()
+                        })
+                        .where(eq(uiTranslations.id, existing[0].id))
+                        .returning();
+                } else {
+                    // Insert new
+                    [record] = await db
+                        .insert(uiTranslations)
+                        .values({
+                            key,
+                            locale,
+                            value,
+                            module: module || null,
+                            tenId: ten_id,
+                            stgId: stg_id
+                        })
+                        .returning();
+                }
                 records.push(record);
             }
         }
@@ -294,13 +331,20 @@ export async function DELETE(request) {
         const stg_id = 'DEV';
 
         // Delete all language variants of this key
-        const deleted = await UITranslation.destroy({
-            where: { key, ten_id, stg_id }
-        });
+        const deleted = await db
+            .delete(uiTranslations)
+            .where(
+                and(
+                    eq(uiTranslations.key, key),
+                    eq(uiTranslations.tenId, ten_id),
+                    eq(uiTranslations.stgId, stg_id)
+                )
+            )
+            .returning();
 
         return NextResponse.json({
             success: true,
-            deleted
+            deleted: deleted.length
         });
 
     } catch (error) {

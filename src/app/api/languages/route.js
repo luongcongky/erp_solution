@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import models from '../../../models/sequelize/index.js';
+import { db } from '@/db';
+import { languages } from '@/db/schema/core';
+import { eq, and } from 'drizzle-orm';
 
-const { Language } = models;
 
 /**
  * @swagger
@@ -35,22 +36,33 @@ const { Language } = models;
  */
 export async function GET(request) {
     try {
-        const ten_id = request.headers.get('x-tenant-id') || '1000';
-        const stg_id = request.headers.get('x-stage-id') || 'DEV';
+        const tenId = request.headers.get('x-tenant-id') || '1000';
+        const stgId = request.headers.get('x-stage-id') || 'DEV';
 
-        const languages = await Language.findAll({
-            where: {
-                ten_id,
-                stg_id,
-                isActive: true,
-            },
-            order: [['order', 'ASC']],
-            attributes: ['id', 'code', 'name', 'nativeName', 'flagEmoji', 'isDefault', 'direction'],
-        });
+        // Drizzle query
+        const result = await db
+            .select({
+                id: languages.id,
+                code: languages.code,
+                name: languages.name,
+                nativeName: languages.nativeName,
+                flagEmoji: languages.flagEmoji,
+                isDefault: languages.isDefault,
+                direction: languages.direction,
+            })
+            .from(languages)
+            .where(
+                and(
+                    eq(languages.tenId, tenId),
+                    eq(languages.stgId, stgId),
+                    eq(languages.isActive, true)
+                )
+            )
+            .orderBy(languages.order);
 
         return NextResponse.json({
             success: true,
-            data: languages,
+            data: result,
         });
     } catch (error) {
         console.error('[API] /api/languages GET error:', error);

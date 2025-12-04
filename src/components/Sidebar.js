@@ -196,7 +196,7 @@ function MenuItem({ item, pathname, level = 1, expandedItems, toggleExpand }) {
 
 export default function Sidebar() {
     const pathname = usePathname();
-    const { user } = useAuth();
+    const { user, activeRole } = useAuth();
     const [menuItems, setMenuItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -209,7 +209,10 @@ export default function Sidebar() {
                 setLoading(true);
                 const headers = { 'Content-Type': 'application/json' };
                 if (user) {
-                    headers['x-user-role'] = user.role || 'user';
+                    // Only set x-user-role if user is authenticated and has a role
+                    if (activeRole) {
+                        headers['x-user-role'] = activeRole;
+                    }
                     if (user.company) {
                         headers['x-tenant-id'] = user.company.ten_id || '1000';
                         headers['x-stage-id'] = user.company.stg_id || 'DEV';
@@ -245,7 +248,7 @@ export default function Sidebar() {
             }
         }
         fetchMenus();
-    }, [pathname, user]);
+    }, [pathname, user, activeRole]);
 
     const toggleExpand = (itemId) => {
         setExpandedItems((prev) => ({ ...prev, [itemId]: !prev[itemId] }));

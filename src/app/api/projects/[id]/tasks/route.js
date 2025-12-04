@@ -1,8 +1,15 @@
-import { NextResponse } from 'next/server';
-import models from '@/models/sequelize/index.js';
-import { handleList, handleCreate } from '@/lib/apiHelpers.js';
+/* 
+ * ⚠️ AUTO-CONVERTED FROM SEQUELIZE TO DRIZZLE
+ * TODO: Review and test all queries
+ * TODO: Convert where clauses to Drizzle syntax
+ * TODO: Update response handling if needed
+ */
 
-const { Task, Project, Employee } = models;
+import { NextResponse } from 'next/server';
+import { db } from '@/db';
+import { tasks, projects, employees } from '@/db/schema';
+import { eq, and, or } from 'drizzle-orm';
+import { handleList, handleCreate } from '@/lib/apiHelpers.js';
 
 /**
  * @swagger
@@ -92,15 +99,13 @@ export async function GET(request, { params }) {
     const { id } = params;
 
     try {
-        const tasks = await Task.findAll({
-            where: { project_id: id },
-            include: [
-                { model: Employee, as: 'assignee' }
-            ],
-            order: [['status', 'ASC'], ['due_date', 'ASC']]
-        });
+        const taskList = await db.select()
+            .from(tasks)
+            .leftJoin(employees, eq(tasks.assignedTo, employees.id))
+            .where(eq(tasks.projectId, id))
+            .orderBy(tasks.status, tasks.dueDate);
 
-        return NextResponse.json({ success: true, data: tasks });
+        return NextResponse.json({ success: true, data: taskList });
     } catch (error) {
         console.error('[API] Error fetching tasks:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -113,12 +118,12 @@ export async function POST(request, { params }) {
 
     try {
         const body = await request.json();
-        const task = await Task.create({
+        const [newTask] = await db.insert(tasks).values({
             ...body,
-            project_id: id
-        });
+            projectId: id,
+        }).returning();
 
-        return NextResponse.json({ success: true, data: task }, { status: 201 });
+        return NextResponse.json({ success: true, data: newTask }, { status: 201 });
     } catch (error) {
         console.error('[API] Error creating task:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });

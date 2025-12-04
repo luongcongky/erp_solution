@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
-import models, { setupAssociations } from '@/models/sequelize/index.js';
-import { Op } from 'sequelize';
-
-const { AuditLog, User } = models;
-
-// Ensure associations are set up
-setupAssociations();
+import { db } from '@/db';
+import { auditLogs, users } from '@/db/schema/core';
+import { eq, and, gte, between, or, sql, desc } from 'drizzle-orm';
 
 export async function GET(request) {
     /**
@@ -18,67 +14,38 @@ export async function GET(request) {
      *     description: Retrieve system audit logs with filtering and pagination
      *     parameters:
      *       - in: query
-     *         name: page
-     *         schema:
-     *           type: integer
-     *           default: 1
-     *         description: Page number
-     *       - in: query
-     *         name: limit
-     *         schema:
-     *           type: integer
-     *           default: 10
-     *         description: Items per page
-     *       - in: query
-     *         name: action
-     *         schema:
-     *           type: string
-     *         description: Filter by action (create, update, delete, login, etc.)
-     *       - in: query
-     *         name: resource
-     *         schema:
-     *           type: string
-     *         description: Filter by resource type
-     *       - in: query
-     *         name: search
-     *         schema:
-     *           type: string
-     *         description: Search in log details
-     *       - in: query
-     *         name: dateRange
-     *         schema:
-     *           type: string
-     *           enum: [today, yesterday, last7days, last30days, all]
-     *         description: Filter by date range
-     *     responses:
-     *       200:
-     *         description: Audit logs retrieved successfully
-     *         content:
-     *           application/json:
-     *             schema:
-     *               type: object
-     *               properties:
-     *                 success:
-     *                   type: boolean
-     *                   example: true
-     *                 data:
-     *                   type: array
-     *                   items:
-     *                     $ref: '#/components/schemas/AuditLog'
-     *                 pagination:
-     *                   type: object
-     *                   properties:
-     *                     total:
-     *                       type: integer
-     *                     page:
-     *                       type: integer
-     *                     limit:
-     *                       type: integer
-     *                     totalPages:
-     *                       type: integer
-     *       500:
-     *         description: Server error
-     */
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - in: query
+ *         name: action
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: resource
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: dateRange
+ *         schema:
+ *           type: string
+ *           enum: [today, yesterday, last7days, last30days, all]
+ *     responses:
+ *       200:
+ *         description: Audit logs retrieved successfully
+ *       500:
+ *         description: Server error
+ */
     try {
         const { searchParams } = new URL(request.url);
 
@@ -93,24 +60,24 @@ export async function GET(request) {
         const dateRange = searchParams.get('dateRange');
         const search = searchParams.get('search');
 
-        // Get tenant and stage from headers (set by client from user session)
+        // Get tenant and stage from headers
         const ten_id = request.headers.get('x-tenant-id') || '1000';
         const stg_id = request.headers.get('x-stage-id') || 'DEV';
 
-        // Build where clause
-        const where = {
-            ten_id,
-            stg_id
-        };
+        // Build where conditions
+        const conditions = [
+            eq(auditLogs.tenId, ten_id),
+            eq(auditLogs.stgId, stg_id)
+        ];
 
         // Action filter
         if (action && action !== 'all') {
-            where.action = action;
+            conditions.push(eq(auditLogs.action, action));
         }
 
-        // Resource filter (object_type)
+        // Resource filter (using module field from actual DB)
         if (resource && resource !== 'all') {
-            where.object_type = resource;
+            conditions.push(eq(auditLogs.module, resource));
         }
 
         // Date range filter
@@ -121,89 +88,80 @@ export async function GET(request) {
             switch (dateRange) {
                 case 'today':
                     startDate = new Date(now.setHours(0, 0, 0, 0));
+                    conditions.push(gte(auditLogs.createdAt, startDate));
                     break;
                 case 'yesterday':
                     startDate = new Date(now.setDate(now.getDate() - 1));
                     startDate.setHours(0, 0, 0, 0);
                     const endDate = new Date(startDate);
                     endDate.setHours(23, 59, 59, 999);
-                    where.created_at = {
-                        [Op.between]: [startDate, endDate]
-                    };
+                    conditions.push(between(auditLogs.createdAt, startDate, endDate));
                     break;
                 case 'last7days':
                     startDate = new Date(now.setDate(now.getDate() - 7));
-                    where.created_at = {
-                        [Op.gte]: startDate
-                    };
+                    conditions.push(gte(auditLogs.createdAt, startDate));
                     break;
                 case 'last30days':
                     startDate = new Date(now.setDate(now.getDate() - 30));
-                    where.created_at = {
-                        [Op.gte]: startDate
-                    };
+                    conditions.push(gte(auditLogs.createdAt, startDate));
                     break;
             }
-
-            if (dateRange === 'today') {
-                where.created_at = {
-                    [Op.gte]: new Date(now.setHours(0, 0, 0, 0))
-                };
-            }
         }
 
-        // Text search (search in changes JSONB field)
+        // Text search in JSONB changes field
         if (search) {
-            where[Op.or] = [
-                {
-                    changes: {
-                        [Op.contains]: { user: search }
-                    }
-                },
-                {
-                    changes: {
-                        [Op.contains]: { details: search }
-                    }
-                },
-                {
-                    changes: {
-                        [Op.contains]: { ip: search }
-                    }
-                }
-            ];
+            conditions.push(
+                or(
+                    sql`${auditLogs.changes}->>'user' ILIKE ${`%${search}%`}`,
+                    sql`${auditLogs.changes}->>'details' ILIKE ${`%${search}%`}`,
+                    sql`${auditLogs.changes}->>'ip' ILIKE ${`%${search}%`}`
+                )
+            );
         }
 
-        // Fetch audit logs with pagination
-        const { count, rows } = await AuditLog.findAndCountAll({
-            where,
-            include: [
-                {
-                    model: User,
-                    as: 'user',
-                    attributes: ['id', 'email', 'firstName', 'lastName']
-                }
-            ],
-            limit,
-            offset,
-            order: [['created_at', 'DESC']],
-            raw: true,
-            nest: true
-        });
+        // Fetch audit logs with user join
+        const rows = await db
+            .select({
+                id: auditLogs.id,
+                action: auditLogs.action,
+                module: auditLogs.module,
+                objectType: auditLogs.objectType,
+                objectId: auditLogs.objectId,
+                changes: auditLogs.changes,
+                createdAt: auditLogs.createdAt,
+                userId: users.id,
+                userEmail: users.email,
+                userFirstName: users.firstName,
+                userLastName: users.lastName,
+            })
+            .from(auditLogs)
+            .leftJoin(users, eq(auditLogs.userId, users.id))
+            .where(and(...conditions))
+            .orderBy(desc(auditLogs.createdAt))
+            .limit(limit)
+            .offset(offset);
+
+        // Get total count
+        const countResult = await db
+            .select({ count: sql < number > `count(*)` })
+            .from(auditLogs)
+            .where(and(...conditions));
+
+        const count = Number(countResult[0]?.count || 0);
 
         // Transform data to match UI format
         const transformedRows = rows.map(row => {
             // Get user name from User model if available, otherwise fallback to changes.user
             let userName = row.changes?.user || 'System';
-            if (row.user && (row.user.firstName || row.user.lastName)) {
-                // Use full name from User table (firstName + lastName)
-                userName = [row.user.firstName, row.user.lastName].filter(Boolean).join(' ');
-            } else if (row.user && row.user.email) {
-                userName = row.user.email;
+            if (row.userFirstName || row.userLastName) {
+                userName = [row.userFirstName, row.userLastName].filter(Boolean).join(' ');
+            } else if (row.userEmail) {
+                userName = row.userEmail;
             }
 
             return {
                 id: row.id.toString(),
-                timestamp: new Date(row.created_at).toLocaleString('en-US', {
+                timestamp: new Date(row.createdAt).toLocaleString('en-US', {
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit',
@@ -213,7 +171,7 @@ export async function GET(request) {
                 }),
                 user: userName,
                 action: row.action,
-                resource: row.object_type || row.module || 'System',
+                resource: row.objectType || row.module || 'System',
                 ip: row.changes?.ip || 'N/A',
                 details: row.changes?.details || 'No details available'
             };

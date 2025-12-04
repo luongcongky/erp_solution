@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { sequelize } from '@/models/sequelize/index.js';
+import { db } from '../../../db';
+import { users, userRoles, roles } from '../../../db/schema';
+import { eq, desc, sql } from 'drizzle-orm';
 
 /**
  * @swagger
@@ -8,51 +10,43 @@ import { sequelize } from '@/models/sequelize/index.js';
  *     tags:
  *       - Users
  *     summary: Get all users
- *     description: Retrieve all users from the database
- *     responses:
- *       200:
- *         description: Successfully retrieved users
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/User'
- *       500:
- *         description: Internal server error
+ *     description: Retrieve all users from the database with their roles
  */
 export async function GET(request) {
     try {
-        const [users] = await sequelize.query(
-            `SELECT 
-                u.id, 
-                u.email, 
-                u."firstName", 
-                u."lastName",
-                CONCAT(u."firstName", ' ', u."lastName") as name,
-                u."isActive",
-                u."createdAt" as "lastLogin",
+        const ten_id = request.headers.get('x-tenant-id') || '1000';
+        const stg_id = request.headers.get('x-stage-id') || 'DEV';
+
+        // Fetch users with aggregated roles using raw SQL
+        const usersResult = await db.execute(sql`
+            SELECT 
+                u.id,
+                u.email,
+                u.first_name as "firstName",
+                u.last_name as "lastName",
+                u.is_active as "isActive",
+                u.created_at as "createdAt",
+                CONCAT(u.first_name, ' ', u.last_name) as name,
                 COALESCE(
                     (SELECT STRING_AGG(r.name, ', ')
                      FROM "core"."user_roles" ur
                      JOIN "core"."roles" r ON ur.role_id = r.id
-                     WHERE ur.user_id = u.id),
+                     WHERE ur.user_id = u.id AND ur.ten_id = ${ten_id} AND ur.stg_id = ${stg_id}),
                     'No Role'
                 ) as role,
                 CASE 
-                    WHEN u."isActive" = true THEN 'active'
+                    WHEN u.is_active = true THEN 'active'
                     ELSE 'inactive'
-                END as status
-             FROM "core"."users" u
-             ORDER BY u."createdAt" DESC`
-        );
+                END as status,
+                u.created_at as "lastLogin"
+            FROM "core"."users" u
+            WHERE u.ten_id = ${ten_id} AND u.stg_id = ${stg_id}
+            ORDER BY u.created_at DESC
+        `);
 
-        return NextResponse.json({ success: true, data: users });
+        console.log('[API] Users result:', JSON.stringify(usersResult.rows, null, 2));
+
+        return NextResponse.json({ success: true, data: usersResult.rows });
     } catch (error) {
         console.error('[API] Error fetching users:', error);
         return NextResponse.json(
@@ -70,38 +64,6 @@ export async function GET(request) {
  *       - Users
  *     summary: Create a new user
  *     description: Create a new user with email, name, password, and role assignments
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - firstName
- *               - password
- *             properties:
- *               email:
- *                 type: string
- *               firstName:
- *                 type: string
- *               lastName:
- *                 type: string
- *               password:
- *                 type: string
- *               roleIds:
- *                 type: array
- *                 items:
- *                   type: string
- *               isActive:
- *                 type: boolean
- *     responses:
- *       201:
- *         description: User created successfully
- *       400:
- *         description: Validation error or email already exists
- *       500:
- *         description: Internal server error
  */
 export async function POST(request) {
     try {
@@ -117,55 +79,53 @@ export async function POST(request) {
         }
 
         // Check if email already exists
-        const [existingUsers] = await sequelize.query(
-            `SELECT id FROM "core"."users" WHERE email = :email`,
-            {
-                replacements: { email },
-                type: sequelize.QueryTypes.SELECT
-            }
-        );
+        const [existingUser] = await db
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.email, email))
+            .limit(1);
 
-        if (existingUsers) {
+        if (existingUser) {
             return NextResponse.json(
                 { success: false, error: 'Email already exists' },
                 { status: 400 }
             );
         }
 
-        // Hash password (simple hash for demo - use bcrypt in production)
+        // Hash password
         const bcrypt = require('bcrypt');
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Create user
-        const [result] = await sequelize.query(
-            `INSERT INTO "core"."users" 
-             (email, "firstName", "lastName", password, "isActive", ten_id, stg_id, "createdAt", "updatedAt")
-             VALUES (:email, :firstName, :lastName, :password, :isActive, '1000', 'DEV', NOW(), NOW())
-             RETURNING id, email, "firstName", "lastName", "isActive"`,
-            {
-                replacements: {
-                    email,
-                    firstName,
-                    lastName: lastName || '',
-                    password: hashedPassword,
-                    isActive
-                },
-                type: sequelize.QueryTypes.INSERT
-            }
-        );
-
-        const newUser = result[0];
+        const [newUser] = await db
+            .insert(users)
+            .values({
+                email,
+                firstName,
+                lastName: lastName || '',
+                password: hashedPassword,
+                isActive,
+                tenId: '1000',
+                stgId: 'DEV'
+            })
+            .returning({
+                id: users.id,
+                email: users.email,
+                firstName: users.firstName,
+                lastName: users.lastName,
+                isActive: users.isActive
+            });
 
         // Assign roles
         if (roleIds.length > 0) {
-            const roleValues = roleIds.map(roleId =>
-                `('${newUser.id}', '${roleId}', '1000', 'DEV', NOW(), NOW())`
-            ).join(',');
+            const roleAssignments = roleIds.map(roleId => ({
+                userId: newUser.id,
+                roleId: roleId,
+                tenId: '1000',
+                stgId: 'DEV'
+            }));
 
-            await sequelize.query(
-                `INSERT INTO "core"."user_roles" (user_id, role_id, ten_id, stg_id, "createdAt", "updatedAt")
-                 VALUES ${roleValues}`
-            );
+            await db.insert(userRoles).values(roleAssignments);
         }
 
         return NextResponse.json(

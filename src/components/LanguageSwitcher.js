@@ -63,14 +63,25 @@ export default function LanguageSwitcher({ variant = 'buttons' }) {
                         alignItems: 'center',
                         gap: '8px',
                         padding: '8px 12px',
-                        background: 'var(--surface-light)',
-                        border: '1px solid var(--border)',
+                        background: isOpen ? 'rgba(37, 99, 235, 0.1)' : 'var(--surface-light)',
+                        border: isOpen ? '1px solid var(--primary)' : '1px solid var(--border)',
                         borderRadius: 'var(--radius-md)',
                         cursor: 'pointer',
                         color: 'var(--text-primary)',
                         fontSize: '1.5rem',
                         minWidth: 'auto',
                         justifyContent: 'center',
+                        transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                        if (!isOpen) {
+                            e.currentTarget.style.background = 'var(--surface-hover)';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (!isOpen) {
+                            e.currentTarget.style.background = 'var(--surface-light)';
+                        }
                     }}
                 >
                     <span>{currentLang.flagEmoji}</span>
@@ -100,9 +111,10 @@ export default function LanguageSwitcher({ variant = 'buttons' }) {
                                     gap: '8px',
                                     padding: '10px 16px',
                                     cursor: 'pointer',
-                                    background: locale === lang.code ? 'var(--primary-light)' : 'transparent',
-                                    color: locale === lang.code ? 'var(--primary)' : 'var(--text-primary)',
+                                    background: locale === lang.code ? 'var(--primary)' : 'transparent',
+                                    color: locale === lang.code ? 'white' : 'var(--text-primary)',
                                     transition: 'background 0.2s',
+                                    fontWeight: locale === lang.code ? 600 : 400,
                                 }}
                                 onMouseEnter={(e) => {
                                     if (locale !== lang.code) e.currentTarget.style.background = 'var(--surface-hover)';

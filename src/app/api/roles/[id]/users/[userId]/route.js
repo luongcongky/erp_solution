@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { sequelize } from '@/models/sequelize/index.js';
+import { db } from '@/db';
+import { userRoles } from '@/db/schema/core';
+import { eq, and } from 'drizzle-orm';
 
 /**
  * @swagger
@@ -25,19 +27,15 @@ import { sequelize } from '@/models/sequelize/index.js';
  *     responses:
  *       200:
  *         description: Successfully removed user from role
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
  *       500:
  *         description: Internal server error
  */
 export async function DELETE(request, { params }) {
     try {
         const { id, userId } = await params;
+
+        const ten_id = request.headers.get('x-tenant-id') || '1000';
+        const stg_id = request.headers.get('x-stage-id') || 'DEV';
 
         if (!id || !userId) {
             return NextResponse.json(
@@ -47,12 +45,16 @@ export async function DELETE(request, { params }) {
         }
 
         // Delete from user_roles table
-        await sequelize.query(
-            `DELETE FROM "core"."user_roles" WHERE role_id = :roleId AND user_id = :userId AND ten_id = '1000' AND stg_id = 'DEV'`,
-            {
-                replacements: { roleId: id, userId: userId }
-            }
-        );
+        await db
+            .delete(userRoles)
+            .where(
+                and(
+                    eq(userRoles.roleId, id),
+                    eq(userRoles.userId, userId),
+                    eq(userRoles.tenId, ten_id),
+                    eq(userRoles.stgId, stg_id)
+                )
+            );
 
         return NextResponse.json({ success: true });
     } catch (error) {

@@ -38,14 +38,54 @@ export function AuthProvider({ children }) {
         localStorage.setItem('lastActivity', Date.now().toString());
     }, []);
 
+    const [activeRole, setActiveRole] = useState(null);
+
     // Initialize auth state
     useEffect(() => {
         const userData = localStorage.getItem('user');
         if (userData) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
             if (checkSession()) {
-                setUser(JSON.parse(userData));
+                const parsedUser = JSON.parse(userData);
+                setUser(parsedUser);
+
+                // Initialize active role
+                if (parsedUser.role) {
+                    const roles = parsedUser.role.split(',').map(r => r.trim());
+                    // Prioritize admin role
+                    const preferredRole = roles.find(r => r.toLowerCase() === 'admin') || roles[0];
+                    setActiveRole(preferredRole);
+                } else {
+                    setActiveRole('user');
+                }
+
                 updateActivity();
+
+                // Fetch latest user profile to get roles
+                if (parsedUser.id) {
+                    fetch(`/api/users/${parsedUser.id}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success && data.data) {
+                                const updatedUser = { ...parsedUser, ...data.data };
+                                // Ensure role is set correctly
+                                if (data.data.role) {
+                                    updatedUser.role = data.data.role;
+                                    // Update active role if not set or if current active role is not in new roles
+                                    const newRoles = data.data.role.split(',').map(r => r.trim());
+                                    setActiveRole(prev => {
+                                        if (!prev || !newRoles.includes(prev)) {
+                                            return newRoles.find(r => r.toLowerCase() === 'admin') || newRoles[0];
+                                        }
+                                        return prev;
+                                    });
+                                }
+                                setUser(updatedUser);
+                                localStorage.setItem('user', JSON.stringify(updatedUser));
+                            }
+                        })
+                        .catch(err => console.error('Failed to fetch user profile:', err));
+                }
             }
         }
         setLoading(false);
@@ -110,7 +150,22 @@ export function AuthProvider({ children }) {
         localStorage.setItem('user', JSON.stringify(userData));
         updateActivity();
         setUser(userData);
+
+        // Initialize active role on login
+        if (userData.role) {
+            const roles = userData.role.split(',').map(r => r.trim());
+            // Prioritize admin role
+            const preferredRole = roles.find(r => r.toLowerCase() === 'admin') || roles[0];
+            setActiveRole(preferredRole);
+        } else {
+            setActiveRole('user');
+        }
+
         router.push('/');
+    };
+
+    const switchRole = (newRole) => {
+        setActiveRole(newRole);
     };
 
     if (loading) {
@@ -128,7 +183,7 @@ export function AuthProvider({ children }) {
     }
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, logout, loading, activeRole, switchRole }}>
             {children}
         </AuthContext.Provider>
     );

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import models from '../../../../models/sequelize/index.js';
+import { db } from '@/db';
+import { uiTranslations } from '@/db/schema/core';
+import { eq, and } from 'drizzle-orm';
 
-const { UITranslation } = models;
 
 /**
  * @swagger
@@ -11,45 +12,6 @@ const { UITranslation } = models;
  *       - Translations
  *     summary: Get translations for a specific locale
  *     description: Retrieve all UI translations for a specific language locale as a nested object
- *     parameters:
- *       - in: path
- *         name: locale
- *         required: true
- *         schema:
- *           type: string
- *         description: Language code (e.g., en, vi)
- *         example: en
- *     responses:
- *       200:
- *         description: Successfully retrieved translations
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   description: Nested translation object
- *                   example:
- *                     common:
- *                       save: Save
- *                       cancel: Cancel
- *                     pages:
- *                       auth:
- *                         title: Login
- *                 count:
- *                   type: integer
- *                   description: Total number of translation keys
- *                   example: 150
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET(request, { params }) {
     try {
@@ -57,15 +19,19 @@ export async function GET(request, { params }) {
         const ten_id = request.headers.get('x-tenant-id') || '1000';
         const stg_id = request.headers.get('x-stage-id') || 'DEV';
 
-        const translations = await UITranslation.findAll({
-            where: {
-                languageCode: locale,
-                ten_id,
-                stg_id,
-            },
-            attributes: ['key', 'value'],
-            raw: true
-        });
+        const translations = await db
+            .select({
+                key: uiTranslations.key,
+                value: uiTranslations.value
+            })
+            .from(uiTranslations)
+            .where(
+                and(
+                    eq(uiTranslations.locale, locale),
+                    eq(uiTranslations.tenId, ten_id),
+                    eq(uiTranslations.stgId, stg_id)
+                )
+            );
 
         // Convert flat array to nested object
         const result = {};

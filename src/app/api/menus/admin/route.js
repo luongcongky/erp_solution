@@ -1,7 +1,12 @@
-import { NextResponse } from 'next/server';
-import models, { sequelize } from '../../../../models/sequelize/index.js';
+/* 
+ * ✅ CONVERTED TO DRIZZLE ORM
+ * All queries now use Drizzle instead of Sequelize
+ */
 
-const { Menu } = models;
+import { NextResponse } from 'next/server';
+import { db } from '@/db';
+import { menus } from '@/db/schema/core';
+import { eq, and, asc } from 'drizzle-orm';
 
 /**
  * @swagger
@@ -33,20 +38,6 @@ const { Menu } = models;
  *     responses:
  *       200:
  *         description: List of menus retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Menu'
- *                 count:
- *                   type: integer
  *       403:
  *         description: Unauthorized (Admin role required)
  *       500:
@@ -67,18 +58,21 @@ export async function GET(request) {
         const ten_id = request.headers.get('x-tenant-id') || '1000';
         const stg_id = request.headers.get('x-stage-id') || 'DEV';
 
-        const menus = await Menu.findAll({
-            where: { ten_id, stg_id },
-            order: [
-                ['level', 'ASC'],
-                ['order', 'ASC'],
-            ],
-        });
+        const menusList = await db
+            .select()
+            .from(menus)
+            .where(
+                and(
+                    eq(menus.tenId, ten_id),
+                    eq(menus.stgId, stg_id)
+                )
+            )
+            .orderBy(asc(menus.level), asc(menus.order));
 
         return NextResponse.json({
             success: true,
-            data: menus,
-            count: menus.length,
+            data: menusList,
+            count: menusList.length,
         });
     } catch (error) {
         console.error('[API] /api/menus/admin GET error:', error);
@@ -115,12 +109,12 @@ export async function GET(request) {
  *           schema:
  *             type: object
  *             required:
- *               - name
- *               - path
+ *               - label
+ *               - href
  *             properties:
- *               name:
+ *               label:
  *                 type: string
- *               path:
+ *               href:
  *                 type: string
  *               icon:
  *                 type: string
@@ -139,16 +133,6 @@ export async function GET(request) {
  *     responses:
  *       201:
  *         description: Menu created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/Menu'
  *       403:
  *         description: Unauthorized
  *       500:
@@ -174,11 +158,14 @@ export async function POST(request) {
         // Add tenant and stage info
         const menuData = {
             ...body,
-            ten_id,
-            stg_id,
+            tenId: ten_id,
+            stgId: stg_id,
         };
 
-        const newMenu = await Menu.create(menuData);
+        const [newMenu] = await db
+            .insert(menus)
+            .values(menuData)
+            .returning();
 
         return NextResponse.json({
             success: true,
@@ -223,9 +210,9 @@ export async function POST(request) {
  *             properties:
  *               id:
  *                 type: string
- *               name:
+ *               label:
  *                 type: string
- *               path:
+ *               href:
  *                 type: string
  *               icon:
  *                 type: string
@@ -244,16 +231,6 @@ export async function POST(request) {
  *     responses:
  *       200:
  *         description: Menu updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/Menu'
  *       400:
  *         description: Menu ID required
  *       403:
@@ -285,20 +262,30 @@ export async function PUT(request) {
             );
         }
 
-        const menu = await Menu.findByPk(id);
+        // Check if menu exists
+        const existingMenu = await db
+            .select()
+            .from(menus)
+            .where(eq(menus.id, id))
+            .limit(1);
 
-        if (!menu) {
+        if (!existingMenu || existingMenu.length === 0) {
             return NextResponse.json(
                 { success: false, error: 'Menu not found' },
                 { status: 404 }
             );
         }
 
-        await menu.update(updateData);
+        // Update menu
+        const [updatedMenu] = await db
+            .update(menus)
+            .set(updateData)
+            .where(eq(menus.id, id))
+            .returning();
 
         return NextResponse.json({
             success: true,
-            data: menu,
+            data: updatedMenu,
         });
     } catch (error) {
         console.error('[API] /api/menus/admin PUT error:', error);
@@ -337,16 +324,6 @@ export async function PUT(request) {
  *     responses:
  *       200:
  *         description: Menu deleted successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
  *       400:
  *         description: Menu ID required
  *       403:
@@ -378,16 +355,24 @@ export async function DELETE(request) {
             );
         }
 
-        const deleted = await Menu.destroy({
-            where: { id },
-        });
+        // Check if menu exists before deleting
+        const existingMenu = await db
+            .select()
+            .from(menus)
+            .where(eq(menus.id, id))
+            .limit(1);
 
-        if (!deleted) {
+        if (!existingMenu || existingMenu.length === 0) {
             return NextResponse.json(
                 { success: false, error: 'Menu not found' },
                 { status: 404 }
             );
         }
+
+        // Delete menu
+        await db
+            .delete(menus)
+            .where(eq(menus.id, id));
 
         return NextResponse.json({
             success: true,

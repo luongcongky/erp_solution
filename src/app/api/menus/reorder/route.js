@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { sequelize } from '@/models/sequelize/index.js';
+import { db } from '@/db';
+import { menus } from '@/db/schema/core';
+import { eq, sql } from 'drizzle-orm';
 
 /**
  * @swagger
@@ -44,26 +46,19 @@ export async function POST(request) {
             );
         }
 
-        // Batch update in transaction
-        await sequelize.transaction(async (t) => {
+        // Batch update using transaction
+        await db.transaction(async (tx) => {
             for (const update of updates) {
                 const { id, order, parentId } = update;
 
-                await sequelize.query(
-                    `UPDATE "core"."menus" 
-                     SET "order" = :order, 
-                         "parentId" = :parentId, 
-                         "updatedAt" = NOW()
-                     WHERE id = :id`,
-                    {
-                        replacements: {
-                            id,
-                            order,
-                            parentId: parentId || null
-                        },
-                        transaction: t
-                    }
-                );
+                await tx
+                    .update(menus)
+                    .set({
+                        order: order,
+                        parentId: parentId || null,
+                        updatedAt: new Date(),
+                    })
+                    .where(eq(menus.id, id));
             }
         });
 

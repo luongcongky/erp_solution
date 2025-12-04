@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import AuditLog from '@/models/sequelize/core/AuditLog';
+import { db } from '@/db';
+import { auditLogs } from '@/db/schema/core';
 
 export async function POST(request) {
     try {
@@ -34,16 +35,19 @@ export async function POST(request) {
         };
 
         // Create audit log
-        const newLog = await AuditLog.create({
-            user_id: user_id || null,
-            action,
-            module: module || 'UNKNOWN',
-            object_type: object_type || null,
-            object_id: object_id || null,
-            changes: formattedChanges,
-            ten_id: ten_id || 'ANTIGRAVITY',
-            stg_id: stg_id || 'DEV'
-        });
+        const [newLog] = await db
+            .insert(auditLogs)
+            .values({
+                userId: user_id || null,
+                action,
+                module: module || 'UNKNOWN',
+                objectType: object_type || null,
+                objectId: object_id || null,
+                changes: formattedChanges,
+                tenId: ten_id || 'ANTIGRAVITY',
+                stgId: stg_id || 'DEV'
+            })
+            .returning();
 
         return NextResponse.json({ success: true, data: newLog }, { status: 201 });
     } catch (error) {

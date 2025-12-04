@@ -8,18 +8,33 @@ import LanguageSwitcher from './LanguageSwitcher';
 
 export default function Header() {
     const pathname = usePathname();
-    const { user, logout } = useAuth();
+    const { user, logout, activeRole, switchRole } = useAuth();
     const [mounted, setMounted] = useState(false);
+    const [showUserMenu, setShowUserMenu] = useState(false);
 
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setMounted(true);
     }, []);
 
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (showUserMenu && !e.target.closest('.user-menu-container')) {
+                setShowUserMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showUserMenu]);
+
     // Don't show header on auth page
     if (pathname === '/auth') {
         return null;
     }
+
+    // Parse available roles from user.role
+    const availableRoles = user?.role ? user.role.split(',').map(r => r.trim()) : [];
 
     return (
         <header style={{
@@ -139,44 +154,150 @@ export default function Header() {
                     }}></span>
                 </button>
 
-                {/* User Menu */}
+                {/* User Menu with Role Switcher */}
                 {mounted && user && (
-                    <div
-                        onClick={logout}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 'var(--spacing-sm)',
-                            padding: 'var(--spacing-sm) var(--spacing-md)',
-                            background: 'var(--surface-light)',
-                            borderRadius: 'var(--radius-md)',
-                            cursor: 'pointer',
-                        }}
-                        title="Logout"
-                    >
-                        <div style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '50%',
-                            background: 'var(--primary)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'white',
-                            fontWeight: 600,
-                            fontSize: '0.875rem',
-                        }}>
-                            {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                    <div className="user-menu-container" style={{ position: 'relative' }}>
+                        <div
+                            onClick={() => setShowUserMenu(!showUserMenu)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 'var(--spacing-sm)',
+                                padding: 'var(--spacing-sm) var(--spacing-md)',
+                                background: showUserMenu ? 'rgba(37, 99, 235, 0.1)' : 'var(--surface-light)',
+                                borderRadius: 'var(--radius-md)',
+                                border: showUserMenu ? '1px solid var(--primary)' : '1px solid transparent',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                                if (!showUserMenu) {
+                                    e.currentTarget.style.background = 'var(--surface-hover)';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (!showUserMenu) {
+                                    e.currentTarget.style.background = 'var(--surface-light)';
+                                }
+                            }}
+                        >
+                            <div style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                background: 'var(--primary)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                fontWeight: 600,
+                                fontSize: '0.875rem',
+                            }}>
+                                {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)' }}>
+                                    {user.name}
+                                </span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                    {activeRole || 'user'}
+                                </span>
+                            </div>
+                            <ChevronDownIcon size={16} />
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                            <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)' }}>
-                                {user.name}
-                            </span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                {user.role}
-                            </span>
-                        </div>
-                        <ChevronDownIcon size={16} />
+
+                        {/* Dropdown Menu */}
+                        {showUserMenu && (
+                            <div style={{
+                                position: 'absolute',
+                                top: 'calc(100% + 8px)',
+                                right: 0,
+                                minWidth: '200px',
+                                background: 'var(--surface)',
+                                border: '1px solid var(--border)',
+                                borderRadius: 'var(--radius-md)',
+                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                                padding: 'var(--spacing-sm)',
+                                zIndex: 1000,
+                            }}>
+                                {/* Role Switcher Section */}
+                                {availableRoles.length > 1 && (
+                                    <>
+                                        <div style={{
+                                            padding: 'var(--spacing-xs) var(--spacing-sm)',
+                                            fontSize: '0.75rem',
+                                            color: 'var(--text-muted)',
+                                            fontWeight: 600,
+                                            textTransform: 'uppercase',
+                                        }}>
+                                            Switch Role
+                                        </div>
+                                        {availableRoles.map((role) => (
+                                            <div
+                                                key={role}
+                                                onClick={() => {
+                                                    switchRole(role);
+                                                    setShowUserMenu(false);
+                                                }}
+                                                style={{
+                                                    padding: 'var(--spacing-sm) var(--spacing-md)',
+                                                    cursor: 'pointer',
+                                                    borderRadius: 'var(--radius-sm)',
+                                                    fontSize: '0.875rem',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    background: activeRole === role ? 'var(--primary)' : 'transparent',
+                                                    color: activeRole === role ? 'white' : 'var(--text-primary)',
+                                                    fontWeight: activeRole === role ? 600 : 400,
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (activeRole !== role) {
+                                                        e.currentTarget.style.background = 'var(--surface-hover)';
+                                                    }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (activeRole !== role) {
+                                                        e.currentTarget.style.background = 'transparent';
+                                                    }
+                                                }}
+                                            >
+                                                <span>{role}</span>
+                                                {activeRole === role && <span style={{ fontSize: '1rem' }}>✓</span>}
+                                            </div>
+                                        ))}
+                                        <div style={{
+                                            height: '1px',
+                                            background: 'var(--border)',
+                                            margin: 'var(--spacing-sm) 0',
+                                        }}></div>
+                                    </>
+                                )}
+
+                                {/* Logout Option */}
+                                <div
+                                    onClick={() => {
+                                        setShowUserMenu(false);
+                                        logout();
+                                    }}
+                                    style={{
+                                        padding: 'var(--spacing-sm) var(--spacing-md)',
+                                        cursor: 'pointer',
+                                        borderRadius: 'var(--radius-sm)',
+                                        fontSize: '0.875rem',
+                                        color: 'var(--error)',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = 'var(--surface-light)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = 'transparent';
+                                    }}
+                                >
+                                    Logout
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
