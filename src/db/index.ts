@@ -21,7 +21,8 @@ const pool = new Pool({
     // Explicitly pass lookup to fix ENOTFOUND on Vercel
     // @ts-ignore - lookup is supported by pg but missing in types
     lookup: (hostname, options, callback) => {
-        dns.lookup(hostname, options, callback);
+        const IPv4_OPTIONS = { family: 4 };
+        dns.lookup(hostname, IPv4_OPTIONS, callback);
     },
 });
 
