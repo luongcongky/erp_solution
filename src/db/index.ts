@@ -22,13 +22,19 @@ const pool = new Pool({
     // @ts-ignore - lookup is supported by pg but missing in types
     lookup: (hostname, options, callback) => {
         console.log(`[DB] Resolving ${hostname} (forcing IPv4)...`);
+        // Try IPv4 first (most compatible)
         dns.lookup(hostname, { ...options, family: 4 }, (err, address, family) => {
             if (err) {
-                console.warn(`[DB] IPv4 lookup failed for ${hostname}: ${err.message}. Falling back to default.`);
-                dns.lookup(hostname, options, (err2, addr2, fam2) => {
-                    if (err2) console.error(`[DB] Default lookup also failed: ${err2.message}`);
-                    else console.log(`[DB] Default lookup success: ${addr2} (IPv${fam2})`);
-                    callback(err2, addr2, fam2);
+                console.warn(`[DB] IPv4 lookup failed for ${hostname}: ${err.message}. Trying IPv6...`);
+                // Explicitly try IPv6
+                dns.lookup(hostname, { ...options, family: 6 }, (err2, addr2, fam2) => {
+                    if (err2) {
+                        console.error(`[DB] IPv6 lookup also failed: ${err2.message}`);
+                        callback(err2, addr2, fam2);
+                    } else {
+                        console.log(`[DB] IPv6 lookup success: ${addr2} (IPv${fam2})`);
+                        callback(null, addr2, fam2);
+                    }
                 });
             } else {
                 console.log(`[DB] Resolved ${hostname} to ${address} (IPv${family})`);
