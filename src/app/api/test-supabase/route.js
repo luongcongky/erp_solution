@@ -42,12 +42,23 @@ export async function GET() {
                 if (match) {
                     const host = match[1];
                     results.dnsInfo.host = host;
-                    const { address, family } = await lookup(host);
-                    results.dnsInfo.address = address;
-                    results.dnsInfo.family = family;
+
+                    // Lookup all records
+                    console.log(`[Supabase Test] Looking up all records for ${host}...`);
+                    const allAddresses = await dns.promises.lookup(host, { all: true });
+                    results.dnsInfo.allAddresses = allAddresses;
+
+                    // IPv4 specific check
+                    try {
+                        const ipv4 = await dns.promises.lookup(host, { family: 4 });
+                        results.dnsInfo.ipv4 = ipv4;
+                    } catch (e) {
+                        results.dnsInfo.ipv4Error = e.message;
+                    }
+
                     results.checks.dns = {
                         status: 'success',
-                        message: `Resolved to ${address} (IPv${family})`
+                        message: `Resolved ${allAddresses.length} addresses: ${allAddresses.map(a => `${a.address} (v${a.family})`).join(', ')}`
                     };
                 }
             } catch (e) {
