@@ -7,8 +7,8 @@ export const hrSchema = pgSchema('hr');
 export const employees = hrSchema.table('employees', {
     id: uuid('id').primaryKey().defaultRandom(),
     employeeCode: varchar('employee_code', { length: 50 }).notNull().unique(),
-    firstName: varchar('first_name', { length: 100 }).notNull(),
-    lastName: varchar('last_name', { length: 100 }).notNull(),
+    firstName: varchar('first_name', { length: 100 }),
+    lastName: varchar('last_name', { length: 100 }),
     email: varchar('email', { length: 255 }).unique(),
     phone: varchar('phone', { length: 50 }),
     department: varchar('department', { length: 100 }),
