@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, boolean, decimal, timestamp, jsonb, pgSchema, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, boolean, decimal, timestamp, jsonb, pgSchema, pgEnum, date } from 'drizzle-orm/pg-core';
 
 // Inventory schema
 export const inventorySchema = pgSchema('inventory');
@@ -24,8 +24,8 @@ export const items = inventorySchema.table('items', {
     isActive: boolean('is_active').default(true),
     tenId: varchar('ten_id', { length: 20 }).notNull(),
     stgId: varchar('stg_id', { length: 20 }).default('DEV'),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 });
 
 // Warehouses table
@@ -37,23 +37,23 @@ export const warehouses = inventorySchema.table('warehouses', {
     isActive: boolean('is_active').default(true),
     tenId: varchar('ten_id', { length: 20 }).notNull(),
     stgId: varchar('stg_id', { length: 20 }).default('DEV'),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 });
 
 // Locations table
 export const locations = inventorySchema.table('locations', {
     id: uuid('id').primaryKey().defaultRandom(),
     warehouseId: uuid('warehouse_id').notNull().references(() => warehouses.id),
+    parentLocationId: uuid('parent_location_id'),
     code: varchar('code', { length: 50 }).notNull(),
     name: varchar('name', { length: 200 }).notNull(),
-    type: varchar('type', { length: 50 }).default('storage'),
-    capacity: decimal('capacity', { precision: 18, scale: 4 }),
-    isActive: boolean('is_active').default(true),
+    path: varchar('path', { length: 500 }),
+    meta: jsonb('meta'),
     tenId: varchar('ten_id', { length: 20 }).notNull(),
     stgId: varchar('stg_id', { length: 20 }).default('DEV'),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 });
 
 // Stock Lots table
@@ -61,13 +61,14 @@ export const stockLots = inventorySchema.table('stock_lots', {
     id: uuid('id').primaryKey().defaultRandom(),
     itemId: uuid('item_id').notNull().references(() => items.id),
     lotNumber: varchar('lot_number', { length: 100 }).notNull(),
-    serialNumber: varchar('serial_number', { length: 100 }),
-    expiryDate: timestamp('expiry_date'),
-    manufactureDate: timestamp('manufacture_date'),
+    supplierLot: varchar('supplier_lot', { length: 100 }),
+    expiryDate: date('expiry_date'),
+    manufactureDate: date('manufacture_date'),
+    meta: jsonb('meta'),
     tenId: varchar('ten_id', { length: 20 }).notNull(),
     stgId: varchar('stg_id', { length: 20 }).default('DEV'),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 });
 
 // Stock Balance table
@@ -82,24 +83,28 @@ export const stockBalance = inventorySchema.table('stock_balance', {
     availableQty: decimal('available_qty', { precision: 18, scale: 4 }).default('0'),
     tenId: varchar('ten_id', { length: 20 }).notNull(),
     stgId: varchar('stg_id', { length: 20 }).default('DEV'),
-    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 });
 
 // Stock Movement table
 export const stockMovement = inventorySchema.table('stock_movements', {
     id: uuid('id').primaryKey().defaultRandom(),
+    reference: varchar('reference', { length: 100 }),
     itemId: uuid('item_id').notNull().references(() => items.id),
-    warehouseId: uuid('warehouse_id').notNull().references(() => warehouses.id),
-    locationId: uuid('location_id').references(() => locations.id),
     lotId: uuid('lot_id').references(() => stockLots.id),
-    movementType: movementTypeEnum('movement_type').notNull(),
+    fromWarehouseId: uuid('from_warehouse_id'),
+    fromLocationId: uuid('from_location_id'),
+    toWarehouseId: uuid('to_warehouse_id'),
+    toLocationId: uuid('to_location_id'),
     quantity: decimal('quantity', { precision: 18, scale: 4 }).notNull(),
-    referenceType: varchar('reference_type', { length: 50 }),
-    referenceId: uuid('reference_id'),
-    notes: text('notes'),
+    uom: varchar('uom', { length: 20 }).notNull(),
+    date: timestamp('date'),
+    createdBy: uuid('created_by'),
+    meta: jsonb('meta'),
     tenId: varchar('ten_id', { length: 20 }).notNull(),
     stgId: varchar('stg_id', { length: 20 }).default('DEV'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
 // UOM Conversion table
@@ -111,8 +116,8 @@ export const uomConversion = inventorySchema.table('uom_conversions', {
     conversionFactor: decimal('conversion_factor', { precision: 18, scale: 6 }).notNull(),
     tenId: varchar('ten_id', { length: 20 }).notNull(),
     stgId: varchar('stg_id', { length: 20 }).default('DEV'),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 });
 
 // Inventory Count table
@@ -125,8 +130,8 @@ export const inventoryCount = inventorySchema.table('inventory_counts', {
     notes: text('notes'),
     tenId: varchar('ten_id', { length: 20 }).notNull(),
     stgId: varchar('stg_id', { length: 20 }).default('DEV'),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 });
 
 // Inventory Count Lines table

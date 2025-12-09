@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, boolean, integer, timestamp, pgSchema } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, boolean, integer, timestamp, pgSchema, jsonb } from 'drizzle-orm/pg-core';
 
 // Core schema
 export const coreSchema = pgSchema('core');
@@ -53,10 +53,11 @@ export const roles = coreSchema.table('roles', {
 // Permissions table
 export const permissions = coreSchema.table('permissions', {
     id: uuid('id').primaryKey().defaultRandom(),
-    name: varchar('name', { length: 100 }).notNull(),
-    resource: varchar('resource', { length: 100 }).notNull(),
+    key: varchar('key', { length: 100 }).notNull(),
+    module: varchar('module', { length: 50 }).notNull(),
     action: varchar('action', { length: 50 }).notNull(),
-    tenId: varchar('ten_id', { length: 20 }).notNull(),
+    description: text('description'),
+    tenId: varchar('ten_id', { length: 20 }).default('default').notNull(),
     stgId: varchar('stg_id', { length: 20 }).default('DEV'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -93,6 +94,7 @@ export const uiTranslations = coreSchema.table('ui_translations', {
     locale: varchar('locale', { length: 10 }).notNull(),
     value: text('value').notNull(),
     module: varchar('module', { length: 100 }),
+    description: text('description'),
     tenId: varchar('ten_id', { length: 20 }).notNull(),
     stgId: varchar('stg_id', { length: 20 }).default('DEV'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -121,13 +123,12 @@ export const auditLogs = coreSchema.table('audit_logs', {
 export const partners = coreSchema.table('partners', {
     id: uuid('id').primaryKey().defaultRandom(),
     name: varchar('name', { length: 255 }).notNull(),
-    code: varchar('code', { length: 50 }).notNull(),
-    type: varchar('type', { length: 50 }).notNull(),
     email: varchar('email', { length: 255 }),
     phone: varchar('phone', { length: 50 }),
-    address: text('address'),
-    city: varchar('city', { length: 100 }),
-    country: varchar('country', { length: 100 }),
+    taxNumber: varchar('tax_number', { length: 50 }),
+    billingAddress: jsonb('billing_address'),
+    shippingAddress: jsonb('shipping_address'),
+    metadata: jsonb('metadata'),
     isActive: boolean('is_active').default(true),
     tenId: varchar('ten_id', { length: 20 }).notNull(),
     stgId: varchar('stg_id', { length: 20 }).default('DEV'),
@@ -193,3 +194,4 @@ export type NewNotification = typeof notifications.$inferInsert;
 
 export type Menu = typeof menus.$inferSelect;
 export type NewMenu = typeof menus.$inferInsert;
+

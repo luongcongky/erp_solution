@@ -63,7 +63,13 @@ export function AuthProvider({ children }) {
 
                 // Fetch latest user profile to get roles
                 if (parsedUser.id) {
-                    fetch(`/api/users/${parsedUser.id}`)
+                    const headers = {};
+                    if (parsedUser.company) {
+                        headers['x-tenant-id'] = parsedUser.company.ten_id || '1000';
+                        headers['x-stage-id'] = parsedUser.company.stg_id || 'DEV';
+                    }
+
+                    fetch(`/api/users/${parsedUser.id}`, { headers })
                         .then(res => res.json())
                         .then(data => {
                             if (data.success && data.data) {

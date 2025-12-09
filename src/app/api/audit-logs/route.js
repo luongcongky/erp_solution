@@ -30,6 +30,7 @@ export async function POST(request) {
             ip: ip,
             user: userName || 'Unknown User',
             details: details || `${action} action on ${module}`,
+            objectType: object_type || null,
             timestamp: new Date().toISOString(),
             ...(changes || {}) // Merge any additional changes data
         };
@@ -40,10 +41,9 @@ export async function POST(request) {
             .values({
                 userId: user_id || null,
                 action,
-                module: module || 'UNKNOWN',
-                objectType: object_type || null,
-                objectId: object_id || null,
-                changes: formattedChanges,
+                resource: module || 'UNKNOWN',
+                resourceId: object_id || null,
+                changes: JSON.stringify(formattedChanges),
                 tenId: ten_id || 'ANTIGRAVITY',
                 stgId: stg_id || 'DEV'
             })

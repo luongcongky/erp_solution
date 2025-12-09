@@ -4,6 +4,7 @@ import PageTemplate from '@/components/PageTemplate';
 import Modal from '@/components/Modal';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslations } from '@/hooks/useTranslations';
+import { useAuth } from '@/components/AuthProvider';
 import { useEventTracking } from '@/hooks/useEventTracking';
 import { ACTION_TYPES } from '@/config/action.config';
 import {
@@ -60,6 +61,7 @@ export default function MenusPage() {
     const [activeId, setActiveId] = useState(null);
     const { t, loading: loadingTranslations } = useTranslations();
     const { trackEvent } = useEventTracking();
+    const { user, activeRole } = useAuth();
     const MODULE_NAME = 'MENUS';
 
     // Drag and drop sensors
@@ -70,24 +72,29 @@ export default function MenusPage() {
         })
     );
 
+
     useEffect(() => {
-        fetchMenus();
-    }, []);
+        if (user) {
+            fetchMenus();
+        }
+    }, [user, activeRole]);
 
     const fetchMenus = async (preserveExpandState = false) => {
+        console.log('MenusPage: fetchMenus called');
         try {
-            const userData = localStorage.getItem('user');
-            const user = userData ? JSON.parse(userData) : null;
+            console.log('MenusPage: Using auth context:', user ? 'User Found' : 'No User', 'Role:', activeRole);
 
             const headers = {
                 'Content-Type': 'application/json',
-                'x-user-role': user?.role || 'admin',
+                // Ensure role is lowercased for API check
+                'x-user-role': (activeRole || user?.role || 'admin').toLowerCase(),
             };
 
             if (user?.company) {
-                headers['x-tenant-id'] = user.company.tenid || '1000';
-                headers['x-stage-id'] = user.company.stgid || 'DEV';
+                headers['x-tenant-id'] = user.company.ten_id || '1000';
+                headers['x-stage-id'] = user.company.stg_id || 'DEV';
             }
+            console.log('MenusPage: Fetching /api/menus/admin with headers:', headers);
 
             const response = await fetch('/api/menus/admin', { headers });
             const data = await response.json();

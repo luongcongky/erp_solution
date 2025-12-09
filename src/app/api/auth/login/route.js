@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
 import { users, userRoles, roles } from '../../../../db/schema/core';
 import { eq, and } from 'drizzle-orm';
-import { getCompanyByEmail } from '@/lib/multiCompany';
+import { getCompanyByEmail } from '@/lib/utils/multiCompany';
 
 /**
  * @swagger

@@ -14,7 +14,7 @@ import {
     ChevronDownIcon,
     MenuIcon,
 } from './icons';
-import { isMenuItemOrChildActive } from '@/lib/menuHelpers';
+import { isMenuItemOrChildActive } from '@/lib/utils/menuHelpers';
 import styles from './Sidebar.module.css';
 import { useAuth } from '@/components/AuthProvider';
 

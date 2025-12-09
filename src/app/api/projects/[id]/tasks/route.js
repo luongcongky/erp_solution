@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { tasks, projects, employees } from '@/db/schema';
 import { eq, and, or } from 'drizzle-orm';
-import { handleList, handleCreate } from '@/lib/apiHelpers.js';
+import { handleList, handleCreate } from '@/lib/legacy/apiHelpers.js';
 
 /**
  * @swagger

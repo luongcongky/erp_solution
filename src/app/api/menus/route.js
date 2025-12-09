@@ -1,9 +1,7 @@
-import { NextResponse } from 'next/server';
-import { db } from '@/db';
-import { menus } from '@/db/schema/core';
-
-import { eq, and } from 'drizzle-orm';
-import { filterMenuByRole, buildMenuTree } from '@/lib/menuHelpers.js';
+import { getMenuService } from '@/lib/services/MenuService';
+import { extractTenantContext } from '@/lib/tenantContext';
+import * as apiResponse from '@/lib/apiResponse';
+import { filterMenuByRole, buildMenuTree } from '@/lib/utils/menuHelpers.js';
 
 /**
  * @swagger
@@ -16,33 +14,17 @@ import { filterMenuByRole, buildMenuTree } from '@/lib/menuHelpers.js';
 export async function GET(request) {
     try {
         const userRole = request.headers.get('x-user-role') || null;
-        const ten_id = request.headers.get('x-tenant-id') || '1000';
-        const stg_id = request.headers.get('x-stage-id') || 'DEV';
+        const tenantContext = extractTenantContext(request);
+        const { ten_id, stg_id } = tenantContext;
 
         console.log('[MENUS] Fetching menus for:', { ten_id, stg_id, userRole });
 
-        // Fetch all menus for this tenant and stage using Drizzle
-        let menusResult;
-        try {
-            menusResult = await db
-                .select()
-                .from(menus)
-                .where(
-                    and(
-                        eq(menus.tenId, ten_id),
-                        eq(menus.stgId, stg_id)
-                    )
-                );
-        } catch (dbError) {
-            console.error('[MENUS] Database query error:', dbError);
-            // Return empty menu if DB query fails
-            menusResult = [];
-        }
-
-
+        // Fetch menus using service
+        const menuService = getMenuService();
+        const result = await menuService.getFlatMenuList(tenantContext);
 
         // Convert to plain array for manipulation
-        const menusList = menusResult.map(m => ({
+        const menusList = result.data.map(m => ({
             id: m.id,
             label: m.label,
             href: m.href,
@@ -111,8 +93,6 @@ export async function GET(request) {
 
         console.log('[MENUS] Total menus after injection:', menusList.length);
 
-        console.log('[MENUS] First menu item:', menusList[0]);
-
         // Filter by role and build tree
         console.log('[MENUS] Filtering by role:', userRole);
         const filteredMenus = filterMenuByRole(menusList, userRole);
@@ -130,22 +110,11 @@ export async function GET(request) {
 
         console.log('[MENUS] Returning menu tree with', countItems(menuTree), 'items');
 
-
-        return NextResponse.json({
-            success: true,
-            data: menuTree,
-            count: countItems(menuTree),
+        return apiResponse.success(menuTree, {
+            count: countItems(menuTree)
         });
     } catch (error) {
         console.error('[API] /api/menus GET error:', error);
-        return NextResponse.json(
-            {
-                success: false,
-                error: 'Failed to fetch menus',
-                message: error.message,
-                stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-            },
-            { status: 500 }
-        );
+        return apiResponse.error(error);
     }
 }
