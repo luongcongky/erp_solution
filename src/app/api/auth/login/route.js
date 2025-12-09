@@ -2,7 +2,7 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
 import { users, userRoles, roles } from '../../../../db/schema/core';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { getCompanyByEmail } from '@/lib/utils/multiCompany';
 
 /**
@@ -57,14 +57,27 @@ export async function POST(request) {
         // Get company context from email for domain info
         const companyContext = await getCompanyByEmail(email);
 
-        // Fetch user roles
-        const userRolesList = await db
-            .select({ name: roles.name })
-            .from(userRoles)
-            .innerJoin(roles, eq(userRoles.roleId, roles.id))
-            .where(eq(userRoles.userId, user.id));
+        // Fetch user roles using raw SQL (Drizzle ORM query was failing)
+        console.log('[LOGIN] Fetching roles for user ID:', user.id);
 
-        const roleNames = userRolesList.map(r => r.name).join(', ');
+        // Debug: Check what user_ids exist in user_roles table
+        const debugResult = await db.execute(sql`
+            SELECT DISTINCT user_id FROM "core"."user_roles" LIMIT 5
+        `);
+        console.log('[LOGIN] Sample user_ids in user_roles table:', debugResult.rows);
+
+        const userRolesResult = await db.execute(sql`
+            SELECT r.name
+            FROM "core"."user_roles" ur
+            JOIN "core"."roles" r ON ur.role_id = r.id
+            WHERE ur.user_id = ${user.id}::uuid
+        `);
+
+        console.log('[LOGIN] Raw SQL result:', userRolesResult);
+        console.log('[LOGIN] User roles fetched:', userRolesResult.rows);
+        const roleNames = userRolesResult.rows.map(r => r.name).join(', ');
+        console.log('[LOGIN] Role names string:', roleNames);
+
 
         const userWithoutPassword = {
             id: user.id,

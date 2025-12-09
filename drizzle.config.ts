@@ -5,13 +5,15 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 // Determine which database to use
-const dbProvider = process.env.DB_PROVIDER || 'local'; // 'local' or 'supabase'
+// Smart fallback: In production, if DB_PROVIDER is not set but DATABASE_URL or SUPABASE_DATABASE_URL exists, use supabase
+const dbProvider = process.env.DB_PROVIDER ||
+    (process.env.NODE_ENV === 'production' && (process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL) ? 'supabase' : 'local');
 
 // Connection string based on provider
 const getConnectionString = () => {
     if (dbProvider === 'supabase') {
-        // Supabase connection
-        let url = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+        // Supabase connection - prefer DATABASE_URL (standard) over SUPABASE_DATABASE_URL (legacy)
+        let url = process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL;
         if (url && !url.includes('sslmode=')) {
             url += '?sslmode=no-verify';
         }

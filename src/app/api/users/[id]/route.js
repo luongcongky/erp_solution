@@ -216,6 +216,8 @@ export async function GET(request, { params }) {
         const ten_id = request.headers.get('x-tenant-id') || '1000';
         const stg_id = request.headers.get('x-stage-id') || 'DEV';
 
+        console.log(`[API] Fetching user ${id} for tenant ${ten_id} stage ${stg_id}`);
+
         if (!id) {
             return NextResponse.json(
                 { success: false, error: 'User ID is required' },
@@ -224,6 +226,7 @@ export async function GET(request, { params }) {
         }
 
         // Fetch user with aggregated roles using raw SQL (complex aggregation)
+        // FIXED: Removed tenant filtering from role subquery - 2025-12-09
         const userResult = await db.execute(sql`
             SELECT 
                 u.id,
@@ -237,7 +240,7 @@ export async function GET(request, { params }) {
                     (SELECT STRING_AGG(r.name, ', ')
                      FROM "core"."user_roles" ur
                      JOIN "core"."roles" r ON ur.role_id = r.id
-                     WHERE ur.user_id = u.id AND ur.ten_id = ${ten_id} AND ur.stg_id = ${stg_id}),
+                     WHERE ur.user_id = u.id),
                     'No Role'
                 ) as role,
                 CASE 
@@ -246,7 +249,7 @@ export async function GET(request, { params }) {
                 END as status,
                 u.created_at as "lastLogin"
             FROM "core"."users" u
-            WHERE u.id = ${id} AND u.ten_id = ${ten_id} AND u.stg_id = ${stg_id}
+            WHERE u.id = ${id}::uuid AND u.ten_id = ${ten_id} AND u.stg_id = ${stg_id}
         `);
 
         if (!userResult.rows || userResult.rows.length === 0) {
@@ -256,6 +259,7 @@ export async function GET(request, { params }) {
             );
         }
 
+        console.log('[API] User found:', userResult.rows[0]);
         return NextResponse.json({ success: true, data: userResult.rows[0] });
     } catch (error) {
         console.error('[API] Error fetching user:', error);

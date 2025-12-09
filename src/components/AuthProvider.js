@@ -54,6 +54,7 @@ export function AuthProvider({ children }) {
                     const roles = parsedUser.role.split(',').map(r => r.trim());
                     // Prioritize admin role
                     const preferredRole = roles.find(r => r.toLowerCase() === 'admin') || roles[0];
+                    console.log('Initial active role:', preferredRole, 'Current roles:', roles);
                     setActiveRole(preferredRole);
                 } else {
                     setActiveRole('user');
@@ -64,12 +65,17 @@ export function AuthProvider({ children }) {
                 // Fetch latest user profile to get roles
                 if (parsedUser.id) {
                     const headers = {};
-                    if (parsedUser.company) {
-                        headers['x-tenant-id'] = parsedUser.company.ten_id || '1000';
-                        headers['x-stage-id'] = parsedUser.company.stg_id || 'DEV';
+                    if (parsedUser.company || parsedUser.ten_id) {
+                        headers['x-tenant-id'] = parsedUser.ten_id || parsedUser.company?.ten_id || '1000';
+                        headers['x-stage-id'] = parsedUser.stg_id || parsedUser.company?.stg_id || 'DEV';
                     }
 
-                    fetch(`/api/users/${parsedUser.id}`, { headers })
+                    console.log('Fetching user profile with headers:', headers);
+
+                    fetch(`/api/users/${parsedUser.id}`, {
+                        headers,
+                        cache: 'no-store'
+                    })
                         .then(res => res.json())
                         .then(data => {
                             if (data.success && data.data) {
@@ -79,9 +85,15 @@ export function AuthProvider({ children }) {
                                     updatedUser.role = data.data.role;
                                     // Update active role if not set or if current active role is not in new roles
                                     const newRoles = data.data.role.split(',').map(r => r.trim());
+                                    console.log('Fetched roles:', newRoles);
                                     setActiveRole(prev => {
-                                        if (!prev || !newRoles.includes(prev)) {
-                                            return newRoles.find(r => r.toLowerCase() === 'admin') || newRoles[0];
+                                        // Case-insensitive check if current role exists in new roles
+                                        const prevExists = prev && newRoles.some(r => r.toLowerCase() === prev.toLowerCase());
+
+                                        if (!prev || !prevExists) {
+                                            const adminRole = newRoles.find(r => r.toLowerCase() === 'admin');
+                                            console.log('Switching role to:', adminRole || newRoles[0]);
+                                            return adminRole || newRoles[0];
                                         }
                                         return prev;
                                     });

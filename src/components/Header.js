@@ -28,13 +28,22 @@ export default function Header() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [showUserMenu]);
 
+    // Parse available roles from user.role
+    const availableRoles = user?.role ? user.role.split(',').map(r => r.trim()) : [];
+
+    // Debug logging for roles
+    useEffect(() => {
+        if (user) {
+            console.log('Header user role raw:', user.role);
+            console.log('Header available roles:', availableRoles);
+            console.log('Header active role:', activeRole);
+        }
+    }, [user, availableRoles, activeRole]);
+
     // Don't show header on auth page
     if (pathname === '/auth') {
         return null;
     }
-
-    // Parse available roles from user.role
-    const availableRoles = user?.role ? user.role.split(',').map(r => r.trim()) : [];
 
     return (
         <header style={{
@@ -247,9 +256,12 @@ export default function Header() {
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'space-between',
-                                                    background: activeRole === role ? 'var(--primary)' : 'transparent',
-                                                    color: activeRole === role ? 'white' : 'var(--text-primary)',
-                                                    fontWeight: activeRole === role ? 600 : 400,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    background: activeRole?.toLowerCase() === role.toLowerCase() ? 'var(--primary)' : 'transparent',
+                                                    color: activeRole?.toLowerCase() === role.toLowerCase() ? 'white' : 'var(--text-primary)',
+                                                    fontWeight: activeRole?.toLowerCase() === role.toLowerCase() ? 600 : 400,
                                                 }}
                                                 onMouseEnter={(e) => {
                                                     if (activeRole !== role) {
@@ -263,7 +275,7 @@ export default function Header() {
                                                 }}
                                             >
                                                 <span>{role}</span>
-                                                {activeRole === role && <span style={{ fontSize: '1rem' }}>✓</span>}
+                                                {activeRole?.toLowerCase() === role.toLowerCase() && <span style={{ fontSize: '1rem' }}>✓</span>}
                                             </div>
                                         ))}
                                         <div style={{
