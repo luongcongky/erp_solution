@@ -62,8 +62,15 @@ const pool = new Pool({
     },
 });
 
-// Create drizzle instance
-export const db = drizzle(pool);
+// Create drizzle instance with logging enabled
+export const db = drizzle(pool, {
+    logger: {
+        logQuery: (query, params) => {
+            console.log('[DRIZZLE SQL]', query);
+            console.log('[DRIZZLE PARAMS]', params);
+        }
+    }
+});
 
 // Export pool as client for closing connection
 export const client = pool;

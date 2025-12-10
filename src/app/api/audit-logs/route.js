@@ -41,10 +41,11 @@ export async function POST(request) {
             .values({
                 userId: user_id || null,
                 action,
-                resource: module || 'UNKNOWN',
-                resourceId: object_id || null,
+                module: module || 'UNKNOWN',
+                objectType: object_type || null,
+                objectId: object_id || null,
                 changes: JSON.stringify(formattedChanges),
-                tenId: ten_id || 'ANTIGRAVITY',
+                tenId: ten_id || '1000',
                 stgId: stg_id || 'DEV'
             })
             .returning();

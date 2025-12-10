@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, boolean, integer, timestamp, pgSchema, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, boolean, integer, timestamp, pgSchema, jsonb, primaryKey } from 'drizzle-orm/pg-core';
 
 // Core schema
 export const coreSchema = pgSchema('core');
@@ -65,14 +65,15 @@ export const permissions = coreSchema.table('permissions', {
 
 // User Roles junction table
 export const userRoles = coreSchema.table('user_roles', {
-    id: uuid('id').primaryKey().defaultRandom(),
     userId: uuid('user_id').notNull().references(() => users.id),
     roleId: uuid('role_id').notNull().references(() => roles.id),
     tenId: varchar('ten_id', { length: 20 }).notNull(),
     stgId: varchar('stg_id', { length: 20 }).default('DEV'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.roleId, table.tenId, table.stgId] })
+}));
 
 
 // Translations table
@@ -107,13 +108,12 @@ export const uiTranslations = coreSchema.table('ui_translations', {
 // Audit Logs table
 export const auditLogs = coreSchema.table('audit_logs', {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('userId').references(() => users.id),
+    userId: uuid('user_id').references(() => users.id),
     action: varchar('action', { length: 100 }).notNull(),
-    resource: varchar('resource', { length: 100 }).notNull(),
-    resourceId: varchar('resourceId', { length: 255 }),
+    module: varchar('module', { length: 100 }).notNull(),
+    objectType: varchar('object_type', { length: 100 }),
+    objectId: varchar('object_id', { length: 255 }),
     changes: text('changes'),
-    ipAddress: varchar('ipAddress', { length: 45 }),
-    userAgent: text('userAgent'),
     tenId: varchar('ten_id', { length: 20 }).notNull(),
     stgId: varchar('stg_id', { length: 20 }).default('DEV'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -156,7 +156,7 @@ export const menus = coreSchema.table('menus', {
 // Notifications table
 export const notifications = coreSchema.table('notifications', {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('userId').notNull().references(() => users.id),
+    userId: uuid('user_id').notNull().references(() => users.id),
     title: varchar('title', { length: 255 }).notNull(),
     message: text('message').notNull(),
     type: varchar('type', { length: 50 }).default('info'),
