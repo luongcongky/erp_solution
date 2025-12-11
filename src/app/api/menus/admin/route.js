@@ -6,7 +6,33 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { menus } from '@/db/schema/core';
-import { eq, and, asc } from 'drizzle-orm';
+import { eq, and, asc, inArray } from 'drizzle-orm';
+
+/**
+ * Helper to get all descendant IDs (up to 3 levels as per current structure)
+ */
+async function getDescendantIds(rootId) {
+
+    // Level 1 (Children)
+    const children = await db
+        .select({ id: menus.id })
+        .from(menus)
+        .where(eq(menus.parentId, rootId));
+
+    const childIds = children.map(c => c.id);
+
+    if (childIds.length === 0) return [];
+
+    // Level 2 (Grandchildren)
+    const grandchildren = await db
+        .select({ id: menus.id })
+        .from(menus)
+        .where(inArray(menus.parentId, childIds));
+
+    const grandchildIds = grandchildren.map(gc => gc.id);
+
+    return [...childIds, ...grandchildIds];
+}
 
 /**
  * @swagger
@@ -191,7 +217,7 @@ export async function POST(request) {
  *     tags:
  *       - Menus (Admin)
  *     summary: Update menu item
- *     description: Update an existing menu item (Admin only)
+ *     description: Update an existing menu item. If isActive changes, it cascades to children. (Admin only)
  *     parameters:
  *       - in: header
  *         name: x-user-role
@@ -263,29 +289,55 @@ export async function PUT(request) {
         }
 
         // Check if menu exists
-        const existingMenu = await db
+        const [existingMenu] = await db
             .select()
             .from(menus)
             .where(eq(menus.id, id))
             .limit(1);
 
-        if (!existingMenu || existingMenu.length === 0) {
+        if (!existingMenu) {
             return NextResponse.json(
                 { success: false, error: 'Menu not found' },
                 { status: 404 }
             );
         }
 
-        // Update menu
-        const [updatedMenu] = await db
-            .update(menus)
-            .set(updateData)
-            .where(eq(menus.id, id))
-            .returning();
+        // Check for cascade update on isActive
+        let idsToUpdate = [id];
+        if (updateData.isActive !== undefined && updateData.isActive !== existingMenu.isActive) {
+            const descendantIds = await getDescendantIds(id);
+            idsToUpdate = [...idsToUpdate, ...descendantIds];
+        }
+
+        // Execute Update
+        let result;
+        if (idsToUpdate.length > 1) {
+            // Use transaction for consistency
+            await db.transaction(async (tx) => {
+                // 1. Update target with all data
+                await tx.update(menus)
+                    .set(updateData)
+                    .where(eq(menus.id, id));
+
+                // 2. Update descendants (only isActive)
+                await tx.update(menus)
+                    .set({ isActive: updateData.isActive })
+                    .where(inArray(menus.id, idsToUpdate.filter(tid => tid !== id)));
+            });
+            // Fetch updated
+            [result] = await db.select().from(menus).where(eq(menus.id, id));
+        } else {
+            [result] = await db
+                .update(menus)
+                .set(updateData)
+                .where(eq(menus.id, id))
+                .returning();
+        }
 
         return NextResponse.json({
             success: true,
-            data: updatedMenu,
+            data: result,
+            message: idsToUpdate.length > 1 ? `Updated menu and ${idsToUpdate.length - 1} descendants` : undefined
         });
     } catch (error) {
         console.error('[API] /api/menus/admin PUT error:', error);
@@ -355,28 +407,32 @@ export async function DELETE(request) {
             );
         }
 
-        // Check if menu exists before deleting
-        const existingMenu = await db
+        // Check if menu exists
+        const [existingMenu] = await db
             .select()
             .from(menus)
             .where(eq(menus.id, id))
             .limit(1);
 
-        if (!existingMenu || existingMenu.length === 0) {
+        if (!existingMenu) {
             return NextResponse.json(
                 { success: false, error: 'Menu not found' },
                 { status: 404 }
             );
         }
 
-        // Delete menu
+        // Get all descendant IDs
+        const descendantIds = await getDescendantIds(id);
+        const allIdsToDelete = [id, ...descendantIds];
+
+        // Delete all
         await db
             .delete(menus)
-            .where(eq(menus.id, id));
+            .where(inArray(menus.id, allIdsToDelete));
 
         return NextResponse.json({
             success: true,
-            message: 'Menu deleted successfully',
+            message: `Menu and ${descendantIds.length} descendants deleted successfully`,
         });
     } catch (error) {
         console.error('[API] /api/menus/admin DELETE error:', error);

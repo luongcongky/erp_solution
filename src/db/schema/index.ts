@@ -1,6 +1,7 @@
 // Export all schemas
 export * from './core';
 export * from './inventory';
+export * from './inventory_ext';
 export * from './hr';
 export * from './accounting';
 export * from './sales';
@@ -27,11 +28,32 @@ export {
 // Re-export commonly used tables from inventory
 export {
     items,
+    itemGroups,
+    itemCategories,
+    uomMaster,
+    priceLists,
+    itemBarcodes,
+    itemSuppliers,
+    itemCustomers,
+    itemPrices,
+    itemSpecifications,
+    itemImages,
+    itemDocuments,
+    itemVariants,
     warehouses,
     locations,
     stockBalance,
-    stockMovement
+    stockMovement,
+    uomConversion
 } from './inventory';
+
+// Re-export industry extension tables
+export {
+    itemPlastics,
+    itemFood,
+    itemMechanical,
+    itemTextile
+} from './inventory_ext';
 
 // Re-export types
 export type {
@@ -58,6 +80,30 @@ export type {
 export type {
     Item,
     NewItem,
+    ItemGroup,
+    NewItemGroup,
+    ItemCategory,
+    NewItemCategory,
+    UomMaster,
+    NewUomMaster,
+    PriceList,
+    NewPriceList,
+    ItemBarcode,
+    NewItemBarcode,
+    ItemSupplier,
+    NewItemSupplier,
+    ItemCustomer,
+    NewItemCustomer,
+    ItemPrice,
+    NewItemPrice,
+    ItemSpecification,
+    NewItemSpecification,
+    ItemImage,
+    NewItemImage,
+    ItemDocument,
+    NewItemDocument,
+    ItemVariant,
+    NewItemVariant,
     Warehouse,
     NewWarehouse,
     Location,
@@ -65,5 +111,18 @@ export type {
     StockBalance,
     NewStockBalance,
     StockMovement,
-    NewStockMovement
+    NewStockMovement,
+    UomConversion,
+    NewUomConversion
 } from './inventory';
+
+export type {
+    ItemPlastic,
+    NewItemPlastic,
+    ItemFood,
+    NewItemFood,
+    ItemMechanical,
+    NewItemMechanical,
+    ItemTextile,
+    NewItemTextile
+} from './inventory_ext';

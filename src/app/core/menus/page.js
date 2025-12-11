@@ -22,8 +22,70 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { SortableMenuRow } from './SortableMenuRow';
+import {
+    DashboardIcon,
+    SalesIcon,
+    InventoryIcon,
+    FinanceIcon,
+    HRIcon,
+    SettingsIcon,
+    ProductIcon,
+    MapPinIcon,
+    BarcodeIcon,
+    ClipboardIcon,
+    AlertIcon,
+    WarningIcon,
+    PluginIcon,
+    WarehouseIcon,
+    ScaleIcon,
+    CoreIcon,
+    UserIcon,
+    ProjectsIcon,
+    MenuIcon,
+    StockManagementIcon,
+    StockInIcon,
+    StockOutIcon,
+    StockBalanceIcon,
+    ChevronDownIcon,
+    ChevronRightIcon
+} from '@/components/icons';
 import '@/styles/datatable-common.css';
 import './menus.css';
+
+const ICON_MAP = {
+    DashboardIcon,
+    SalesIcon,
+    InventoryIcon,
+    FinanceIcon,
+    HRIcon,
+    SettingsIcon,
+    ProductIcon,
+    MapPinIcon,
+    BarcodeIcon,
+    ClipboardIcon,
+    AlertIcon,
+    WarningIcon,
+    PluginIcon,
+    WarehouseIcon,
+    ScaleIcon,
+    CoreIcon,
+    UserIcon,
+    ProjectsIcon,
+    MenuIcon,
+    StockManagementIcon,
+    StockInIcon,
+    StockOutIcon,
+    StockBalanceIcon
+};
+
+const renderIcon = (iconName) => {
+    if (!iconName) return null;
+    const IconComponent = ICON_MAP[iconName];
+    if (IconComponent) {
+        return <span className="menuIcon"><IconComponent size={18} /></span>;
+    }
+    return <span className="menuIcon">{iconName}</span>;
+};
 
 // Module color mapping for visual indicators
 const MODULE_COLORS = {
@@ -34,6 +96,78 @@ const MODULE_COLORS = {
     'HR': '#fa709a',
     'Projects': '#feca57',
     'Settings': '#a29bfe',
+};
+
+const IconPicker = ({ value, onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const closeTimerRef = useState(null); // specific usage of ref, but useState works for quick ref-like storage if we don't need instant update
+    // Actually standard Ref is better:
+    const timerRef = React.useRef(null);
+
+    const handleMouseEnter = () => {
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
+    };
+
+    const handleMouseLeave = () => {
+        timerRef.current = setTimeout(() => {
+            setIsOpen(false);
+        }, 150); // 150ms delay to allow crossing gaps comfortably
+    };
+
+    return (
+        <div
+            className="iconPickerContainer"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+        >
+            {/* Trigger Button */}
+            <div
+                className={`iconPickerTrigger ${isOpen ? 'active' : ''}`}
+                onClick={() => {
+                    // Toggle open/close immediately on click
+                    // If opening, ensure we clear any pending close timer
+                    if (!isOpen) handleMouseEnter();
+                    setIsOpen(!isOpen);
+                }}
+            >
+                {value ? (
+                    <div className="selectedIconPreview trigger">
+                        {renderIcon(value)}
+                        <span>{value}</span>
+                    </div>
+                ) : (
+                    <span className="placeholder">Select an icon...</span>
+                )}
+                <span className="chevron">{isOpen ? '▲' : '▼'}</span>
+            </div>
+
+            {/* Dropdown Grid */}
+            {isOpen && (
+                <div
+                    className="iconGrid dropdown"
+                // Also handle mouse enter/leave on dropdown specifically if needed, 
+                // but container wrapping handles it.
+                >
+                    {Object.entries(ICON_MAP).map(([iconName, IconComponent]) => (
+                        <div
+                            key={iconName}
+                            className={`iconOption ${value === iconName ? 'selected' : ''}`}
+                            onClick={() => {
+                                onChange(iconName);
+                                setIsOpen(false);
+                            }}
+                            title={iconName}
+                        >
+                            <IconComponent size={24} />
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
 };
 
 export default function MenusPage() {
@@ -144,6 +278,35 @@ export default function MenusPage() {
         if (!item.parentId) return null;
         const parent = menuItems.find(m => m.id === item.parentId);
         return parent?.label;
+    };
+
+    const handleDelete = async (menuItem) => {
+        if (!window.confirm(t('pages.menus.confirmDelete', `Are you sure you want to delete "${menuItem.label}"?`))) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/menus/admin?id=${menuItem.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'x-user-role': 'admin' // Ensure admin role is sent
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Refresh list
+                await fetchMenus();
+                // Optional: Show success toast if you have a toast system
+                // alert('Menu deleted successfully'); 
+            } else {
+                alert(data.error || 'Failed to delete menu');
+            }
+        } catch (error) {
+            console.error('Error deleting menu:', error);
+            alert('An error occurred while deleting the menu');
+        }
     };
 
     // Filter data
@@ -259,19 +422,68 @@ export default function MenusPage() {
         e.preventDefault();
         setSubmitting(true);
 
-        // Simulate API call
         try {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            // In a real app, you would call the API here
-            // const response = await fetch('/api/menus', ...);
+            console.log('MenusPage: handleSubmit called with data:', formData);
 
-            // For now, just close the modal and refresh (mock)
+            // Calculate level
+            let level = 1;
+            if (formData.parentId) {
+                const parent = menuItems.find(m => m.id === formData.parentId);
+                if (parent) {
+                    level = (parent.level || 1) + 1;
+                }
+            }
+
+            // Prepare payload
+            const payload = {
+                ...formData,
+                level,
+                // Default roles if not specified (could be enhanced later to have a picker)
+                roles: ['user', 'admin'],
+                // Ensure parentId is null if empty string
+                parentId: formData.parentId || null
+            };
+
+            const headers = {
+                'Content-Type': 'application/json',
+                'x-user-role': (activeRole || user?.role || 'admin').toLowerCase(),
+            };
+
+            if (user?.company) {
+                headers['x-tenant-id'] = user.company.ten_id || '1000';
+                headers['x-stage-id'] = user.company.stg_id || 'DEV';
+            }
+
+            const url = '/api/menus/admin';
+            const method = editingMenu ? 'PUT' : 'POST';
+
+            if (editingMenu) {
+                payload.id = editingMenu.id;
+            }
+
+            console.log(`MenusPage: Sending ${method} request to ${url}`, payload);
+
+            const response = await fetch(url, {
+                method,
+                headers,
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || result.message || 'Failed to save menu');
+            }
+
+            console.log('MenusPage: Save successful', result);
+
+            // Close modal and refresh
             setShowModal(false);
             fetchMenus(true); // Preserve expand state
-            alert('Menu saved successfully (Mock)');
+            alert(`Menu ${editingMenu ? 'updated' : 'created'} successfully`);
         } catch (error) {
             console.error('Error saving menu:', error);
-            alert('Failed to save menu');
+            alert(`Failed to save menu: ${error.message}`);
         } finally {
             setSubmitting(false);
         }
@@ -544,7 +756,7 @@ export default function MenusPage() {
                                                                         >
                                                                             {isExpanded ? '▼' : '▶'}
                                                                         </button>
-                                                                        {parent.icon && <span className="menuIcon">{parent.icon}</span>}
+                                                                        {renderIcon(parent.icon)}
                                                                         <div className="menuLabel">{parent.label}</div>
                                                                         <span
                                                                             className="module-badge"
@@ -573,17 +785,18 @@ export default function MenusPage() {
                                                                         >
                                                                             {t('common.edit', 'Edit')}
                                                                         </button>
+                                                                        {parent.href && (
+                                                                            <button
+                                                                                className="viewButton"
+                                                                                onClick={() => window.open(parent.href, '_blank')}
+                                                                                title={t('common.view', 'View')}
+                                                                            >
+                                                                                {t('common.view', 'View')}
+                                                                            </button>
+                                                                        )}
                                                                         <button
                                                                             className="deleteButton"
-                                                                            onClick={() => {
-                                                                                trackEvent({
-                                                                                    action: ACTION_TYPES.DELETE,
-                                                                                    module: MODULE_NAME,
-                                                                                    object_id: parent.id,
-                                                                                    object_type: 'Menu',
-                                                                                    details: `Clicked delete for menu: ${parent.label}`
-                                                                                });
-                                                                            }}
+                                                                            onClick={() => handleDelete(parent)}
                                                                         >
                                                                             {t('common.delete', 'Delete')}
                                                                         </button>
@@ -595,68 +808,160 @@ export default function MenusPage() {
 
                                                     // Child Rows (if expanded)
                                                     ...(isExpanded ? children.map((child) => (
-                                                        <SortableMenuRow
-                                                            key={`child-${child.id}`}
-                                                            id={child.id}
-                                                            isDragging={activeId === child.id}
-                                                            isChild={true}
-                                                        >
-                                                            {({ listeners, attributes }) => (
-                                                                <>
-                                                                    <td className="tableCell">
-                                                                        <span className="dragHandle" {...listeners} {...attributes}>
-                                                                            ⋮⋮
-                                                                        </span>
-                                                                    </td>
-                                                                    <td className="tableCell">
-                                                                        <div className="menu-item-with-indicator indented">
-                                                                            <span
-                                                                                className="module-indicator"
-                                                                                style={{ backgroundColor: getModuleColor(child) }}
-                                                                            />
-                                                                            <span className="indent-marker">└─</span>
-                                                                            {child.icon && <span className="menuIcon">{child.icon}</span>}
-                                                                            <div className="menuLabel">{child.label}</div>
-                                                                        </div>
-                                                                    </td>
-                                                                    <td className="tableCell">
-                                                                        <div className="menuPath">{child.href || '-'}</div>
-                                                                    </td>
-                                                                    <td className="tableCell menuOrder">
-                                                                        {child.order}
-                                                                    </td>
-                                                                    <td className="tableCell">
-                                                                        <span className={`statusBadge ${child.isActive ? 'active' : 'inactive'}`}>
-                                                                            {child.isActive ? t('pages.menus.active', 'Active') : t('pages.menus.inactive', 'Inactive')}
-                                                                        </span>
-                                                                    </td>
-                                                                    <td className="tableCell">
-                                                                        <div className="actionButtons">
-                                                                            <button
-                                                                                className="editButton"
-                                                                                onClick={() => handleEdit(child)}
-                                                                            >
-                                                                                {t('common.edit', 'Edit')}
-                                                                            </button>
-                                                                            <button
-                                                                                className="deleteButton"
-                                                                                onClick={() => {
-                                                                                    trackEvent({
-                                                                                        action: ACTION_TYPES.DELETE,
-                                                                                        module: MODULE_NAME,
-                                                                                        object_id: child.id,
-                                                                                        object_type: 'Menu',
-                                                                                        details: `Clicked delete for submenu: ${child.label}`
-                                                                                    });
-                                                                                }}
-                                                                            >
-                                                                                {t('common.delete', 'Delete')}
-                                                                            </button>
-                                                                        </div>
-                                                                    </td>
-                                                                </>
-                                                            )}
-                                                        </SortableMenuRow>
+                                                        <React.Fragment key={child.id}>
+                                                            {/* Child Row (Level 2) */}
+                                                            <SortableMenuRow
+                                                                key={`child-${child.id}`}
+                                                                id={child.id}
+                                                                isDragging={activeId === child.id}
+                                                                isChild={true}
+                                                            >
+                                                                {({ listeners, attributes }) => (
+                                                                    <>
+                                                                        <td className="tableCell">
+                                                                            <span className="dragHandle" {...listeners} {...attributes}>
+                                                                                ⋮⋮
+                                                                            </span>
+                                                                        </td>
+                                                                        <td className="tableCell">
+                                                                            <div className="menu-item-with-indicator indented">
+                                                                                <span
+                                                                                    className="module-indicator"
+                                                                                    style={{ backgroundColor: getModuleColor(child) }}
+                                                                                />
+                                                                                <span className="indent-marker">└─</span>
+
+                                                                                {/* Expansion toggle for Level 2 if it has children */}
+                                                                                {menuItems.some(m => m.parentId === child.id) && (
+                                                                                    <button
+                                                                                        className="toggle-button"
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            toggleModule(child.id);
+                                                                                        }}
+                                                                                    >
+                                                                                        {expandedModules.has(child.id) ?
+                                                                                            <ChevronDownIcon size={12} /> :
+                                                                                            <ChevronRightIcon size={12} />
+                                                                                        }
+                                                                                    </button>
+                                                                                )}
+
+                                                                                {renderIcon(child.icon)}
+                                                                                <div className="menuLabel">{child.label}</div>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="tableCell">
+                                                                            <div className="menuPath">{child.href || '-'}</div>
+                                                                        </td>
+                                                                        <td className="tableCell menuOrder">
+                                                                            {child.order}
+                                                                        </td>
+                                                                        <td className="tableCell">
+                                                                            <span className={`statusBadge ${child.isActive ? 'active' : 'inactive'}`}>
+                                                                                {child.isActive ? t('pages.menus.active', 'Active') : t('pages.menus.inactive', 'Inactive')}
+                                                                            </span>
+                                                                        </td>
+                                                                        <td className="tableCell">
+                                                                            <div className="actionButtons">
+                                                                                <button
+                                                                                    className="editButton"
+                                                                                    onClick={() => handleEdit(child)}
+                                                                                >
+                                                                                    {t('common.edit', 'Edit')}
+                                                                                </button>
+                                                                                {child.href && (
+                                                                                    <button
+                                                                                        className="viewButton"
+                                                                                        onClick={() => window.open(child.href, '_blank')}
+                                                                                        title={t('common.view', 'View')}
+                                                                                    >
+                                                                                        {t('common.view', 'View')}
+                                                                                    </button>
+                                                                                )}
+                                                                                <button
+                                                                                    className="deleteButton"
+                                                                                    onClick={() => handleDelete(child)}
+                                                                                >
+                                                                                    {t('common.delete', 'Delete')}
+                                                                                </button>
+                                                                            </div>
+                                                                        </td>
+                                                                    </>
+                                                                )}
+                                                            </SortableMenuRow>
+
+                                                            {/* GrandChild Rows (Level 3 - if Level 2 expanded) */}
+                                                            {expandedModules.has(child.id) && menuItems
+                                                                .filter(m => m.parentId === child.id)
+                                                                .sort((a, b) => a.order - b.order)
+                                                                .map(grandChild => (
+                                                                    <SortableMenuRow
+                                                                        key={`grandchild-${grandChild.id}`}
+                                                                        id={grandChild.id}
+                                                                        isDragging={activeId === grandChild.id}
+                                                                        isChild={true}
+                                                                    >
+                                                                        {({ listeners, attributes }) => (
+                                                                            <>
+                                                                                <td className="tableCell">
+                                                                                    <span className="dragHandle" {...listeners} {...attributes}>
+                                                                                        ⋮⋮
+                                                                                    </span>
+                                                                                </td>
+                                                                                <td className="tableCell">
+                                                                                    <div className="menu-item-with-indicator indented" style={{ paddingLeft: '48px' }}>
+                                                                                        <span
+                                                                                            className="module-indicator"
+                                                                                            style={{ backgroundColor: getModuleColor(grandChild) }}
+                                                                                        />
+                                                                                        <span className="indent-marker">└─</span>
+                                                                                        {renderIcon(grandChild.icon)}
+                                                                                        <div className="menuLabel">{grandChild.label}</div>
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="tableCell">
+                                                                                    <div className="menuPath">{grandChild.href || '-'}</div>
+                                                                                </td>
+                                                                                <td className="tableCell menuOrder">
+                                                                                    {grandChild.order}
+                                                                                </td>
+                                                                                <td className="tableCell">
+                                                                                    <span className={`statusBadge ${grandChild.isActive ? 'active' : 'inactive'}`}>
+                                                                                        {grandChild.isActive ? t('pages.menus.active', 'Active') : t('pages.menus.inactive', 'Inactive')}
+                                                                                    </span>
+                                                                                </td>
+                                                                                <td className="tableCell">
+                                                                                    <div className="actionButtons">
+                                                                                        <button
+                                                                                            className="editButton"
+                                                                                            onClick={() => handleEdit(grandChild)}
+                                                                                        >
+                                                                                            {t('common.edit', 'Edit')}
+                                                                                        </button>
+                                                                                        {grandChild.href && (
+                                                                                            <button
+                                                                                                className="viewButton"
+                                                                                                onClick={() => window.open(grandChild.href, '_blank')}
+                                                                                                title={t('common.view', 'View')}
+                                                                                            >
+                                                                                                {t('common.view', 'View')}
+                                                                                            </button>
+                                                                                        )}
+                                                                                        <button
+                                                                                            className="deleteButton"
+                                                                                            onClick={() => handleDelete(grandChild)}
+                                                                                        >
+                                                                                            {t('common.delete', 'Delete')}
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </td>
+                                                                            </>
+                                                                        )}
+                                                                    </SortableMenuRow>
+                                                                ))
+                                                            }
+                                                        </React.Fragment>
                                                     )) : [])
                                                 ];
                                             })
@@ -682,7 +987,7 @@ export default function MenusPage() {
                                                                         className="module-indicator"
                                                                         style={{ backgroundColor: getModuleColor(item) }}
                                                                     />
-                                                                    {item.icon && <span className="menuIcon">{item.icon}</span>}
+                                                                    {renderIcon(item.icon)}
                                                                     <div>
                                                                         <div className="menuLabel">{item.label}</div>
                                                                         {getParentLabel(item) && (
@@ -717,17 +1022,18 @@ export default function MenusPage() {
                                                                     >
                                                                         {t('common.edit', 'Edit')}
                                                                     </button>
+                                                                    {item.href && (
+                                                                        <button
+                                                                            className="viewButton"
+                                                                            onClick={() => window.open(item.href, '_blank')}
+                                                                            title={t('common.view', 'View')}
+                                                                        >
+                                                                            {t('common.view', 'View')}
+                                                                        </button>
+                                                                    )}
                                                                     <button
                                                                         className="deleteButton"
-                                                                        onClick={() => {
-                                                                            trackEvent({
-                                                                                action: ACTION_TYPES.DELETE,
-                                                                                module: MODULE_NAME,
-                                                                                object_id: item.id,
-                                                                                object_type: 'Menu',
-                                                                                details: `Clicked delete for menu: ${item.label}`
-                                                                            });
-                                                                        }}
+                                                                        onClick={() => handleDelete(item)}
                                                                     >
                                                                         {t('common.delete', 'Delete')}
                                                                     </button>
@@ -743,13 +1049,14 @@ export default function MenusPage() {
                             </table>
                         </div>
                     </div>
-                </DndContext>
-            </PageTemplate>
+                </DndContext >
+            </PageTemplate >
 
             {/* Add/Edit Modal */}
-            <Modal
+            < Modal
                 isOpen={showModal}
-                onClose={() => setShowModal(false)}
+                onClose={() => setShowModal(false)
+                }
                 title={editingMenu ? t('pages.menus.editMenu', 'Edit Menu') : t('pages.menus.addMenu', 'Add Menu')}
                 maxWidth="800px"
                 footer={
@@ -800,12 +1107,9 @@ export default function MenusPage() {
 
                         <div className="formGroup">
                             <label>{t('pages.menus.form.icon', 'Icon')}</label>
-                            <input
-                                type="text"
-                                className="formInput"
+                            <IconPicker
                                 value={formData.icon}
-                                onChange={(e) => setFormData(prev => ({ ...prev, icon: e.target.value }))}
-                                placeholder="e.g., 🏠"
+                                onChange={(newIcon) => setFormData(prev => ({ ...prev, icon: newIcon }))}
                             />
                         </div>
 
@@ -853,7 +1157,7 @@ export default function MenusPage() {
                         </div>
                     </div>
                 </form>
-            </Modal>
+            </Modal >
         </>
     );
 }

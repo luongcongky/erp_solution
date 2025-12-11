@@ -184,6 +184,23 @@ select option {
     border-color: rgba(59, 130, 246, 0.5);
 }
 
+.viewButton {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.viewButton:hover {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: #22c55e;
+}
+
 .deleteButton {
     background: rgba(239, 68, 68, 0.18);
     color: #FCA5A5;
@@ -248,6 +265,10 @@ select option {
     font-size: 0.875rem;
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
+    height: 46px;
+    /* Fixed height for alignment */
+    display: flex;
+    align-items: center;
 }
 
 .formInput:focus,
@@ -418,4 +439,124 @@ input:checked+.slider:before {
     background: #1E293B;
     border: 2px solid #2563EB;
     border-radius: 8px;
+}
+
+/* Icon Picker Styles */
+.iconPickerContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+}
+
+.iconPickerTrigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    background: #0F172A;
+    border: 1.5px solid #334155;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    height: 46px;
+    /* Fixed height to match inputs */
+    color: #E2E8F0;
+}
+
+.iconPickerTrigger:hover {
+    border-color: #475569;
+}
+
+.iconPickerTrigger.active {
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.selectedIconPreview.trigger {
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.placeholder {
+    color: #94A3B8;
+}
+
+.chevron {
+    font-size: 12px;
+    color: #94A3B8;
+    margin-left: 8px;
+}
+
+.iconGrid {
+    /* Fallback if not dropdown */
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 8px;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    background: #0F172A;
+}
+
+.iconGrid.dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    margin-top: 4px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    border-color: #475569;
+}
+
+/* Bridge the gap so onMouseLeave doesn't fire */
+.iconGrid.dropdown::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: transparent;
+    cursor: default;
+}
+
+.iconOption {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 48px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #1E293B;
+    border: 1px solid transparent;
+    color: #94A3B8;
+}
+
+.iconOption:hover {
+    background: #334155;
+    color: #E2E8F0;
+}
+
+.iconOption.selected {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: #3B82F6;
+    color: #60A5FA;
+}
+
+.selectedIconPreview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: #1E293B;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    font-size: 0.875rem;
+    color: #E2E8F0;
 }

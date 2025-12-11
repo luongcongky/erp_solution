@@ -125,3 +125,18 @@ export function isMenuItemOrChildActive(menuItem, pathname) {
 
     return false;
 }
+
+// Module color mapping for visual indicators
+export const MODULE_COLORS = {
+    'Core': '#667eea',
+    'Sales': '#f093fb',
+    'Finance': '#4facfe',
+    'Inventory': '#667eea',
+    'HR': '#fa709a',
+    'Projects': '#feca57',
+    'Settings': '#a29bfe',
+};
+
+export function getModuleColor(label) {
+    return MODULE_COLORS[label] || '#999';
+}

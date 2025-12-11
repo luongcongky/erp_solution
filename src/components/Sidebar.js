@@ -13,8 +13,24 @@ import {
     ChevronRightIcon,
     ChevronDownIcon,
     MenuIcon,
+    ProductIcon,
+    MapPinIcon,
+    BarcodeIcon,
+    ClipboardIcon,
+    AlertIcon,
+    WarningIcon,
+    PluginIcon,
+    WarehouseIcon,
+    ScaleIcon,
+    ProjectsIcon,
+    CoreIcon,
+    UserIcon,
+    StockManagementIcon,
+    StockInIcon,
+    StockOutIcon,
+    StockBalanceIcon
 } from './icons';
-import { isMenuItemOrChildActive } from '@/lib/utils/menuHelpers';
+import { isMenuItemOrChildActive, MODULE_COLORS } from '@/lib/utils/menuHelpers';
 import styles from './Sidebar.module.css';
 import { useAuth } from '@/components/AuthProvider';
 
@@ -26,10 +42,27 @@ const iconMap = {
     FinanceIcon,
     HRIcon,
     SettingsIcon,
+    ProductIcon,
+    MapPinIcon,
+    BarcodeIcon,
+    ClipboardIcon,
+    AlertIcon,
+    WarningIcon,
+    PluginIcon,
+    WarehouseIcon,
+    ScaleIcon,
+    ProjectsIcon,
+    CoreIcon,
+    UserIcon,
+    MenuIcon,
+    StockManagementIcon,
+    StockInIcon,
+    StockOutIcon,
+    StockBalanceIcon
 };
 
 // Recursive menu item component
-function MenuItem({ item, pathname, level = 1, expandedItems, toggleExpand }) {
+function MenuItem({ item, pathname, level = 1, expandedItems, toggleExpand, moduleColor }) {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedItems[item.id] || false;
     const isActive = item.href === pathname;
@@ -51,9 +84,9 @@ function MenuItem({ item, pathname, level = 1, expandedItems, toggleExpand }) {
         let fontWeight = isActive ? 700 : 600;
         let iconSize = 22;
         let marginBottom = '2px';
-        let background = isActive ? 'rgba(37, 99, 235, 0.12)' : 'transparent';
-        let borderLeft = isActive ? '4px solid var(--primary)' : '4px solid transparent';
-        let hoverBackground = 'rgba(37, 99, 235, 0.05)';
+        let background = isActive ? `${moduleColor}20` : 'transparent'; // Hex + 20 opacity
+        let borderLeft = isActive ? `4px solid ${moduleColor}` : '4px solid transparent';
+        let hoverBackground = `${moduleColor}10`; // Hex + 10 opacity
 
         if (level === 2) {
             paddingLeft = 'calc(var(--spacing-lg) + 28px)';
@@ -61,18 +94,18 @@ function MenuItem({ item, pathname, level = 1, expandedItems, toggleExpand }) {
             fontWeight = isActive ? 600 : 500;
             iconSize = 18;
             marginBottom = '1px';
-            background = isActive ? 'rgba(37, 99, 235, 0.08)' : 'rgba(0, 0, 0, 0.02)';
-            borderLeft = isActive ? '3px solid var(--primary)' : '3px solid rgba(37, 99, 235, 0.15)';
-            hoverBackground = 'rgba(37, 99, 235, 0.04)';
+            background = isActive ? `${moduleColor}15` : 'rgba(0, 0, 0, 0.02)';
+            borderLeft = isActive ? `3px solid ${moduleColor}` : `3px solid ${moduleColor}20`;
+            hoverBackground = `${moduleColor}08`;
         } else if (level === 3) {
             paddingLeft = 'calc(var(--spacing-lg) + 56px)';
             fontSize = '0.75rem';
             fontWeight = isActive ? 600 : 400;
             iconSize = 16;
             marginBottom = '0px';
-            background = isActive ? 'rgba(37, 99, 235, 0.06)' : 'rgba(0, 0, 0, 0.01)';
-            borderLeft = isActive ? '2px solid var(--primary)' : '2px solid rgba(37, 99, 235, 0.1)';
-            hoverBackground = 'rgba(37, 99, 235, 0.03)';
+            background = isActive ? `${moduleColor}10` : 'rgba(0, 0, 0, 0.01)';
+            borderLeft = isActive ? `2px solid ${moduleColor}` : `2px solid ${moduleColor}15`;
+            hoverBackground = `${moduleColor}05`;
         }
 
         return {
@@ -84,7 +117,7 @@ function MenuItem({ item, pathname, level = 1, expandedItems, toggleExpand }) {
             background,
             borderLeft,
             hoverBackground,
-            color: isActive ? 'var(--primary)' : isChildActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+            color: isActive ? moduleColor : isChildActive ? 'var(--text-primary)' : 'var(--text-secondary)',
         };
     };
 
@@ -105,11 +138,11 @@ function MenuItem({ item, pathname, level = 1, expandedItems, toggleExpand }) {
     const content = (
         <>
             {level === 3 && !IconComponent && !item.icon && (
-                <MenuIcon size={currentStyle.iconSize} className={styles.dotLevel3} style={{ color: isActive ? 'var(--primary)' : 'var(--text-muted)' }} />
+                <MenuIcon size={currentStyle.iconSize} className={styles.dotLevel3} style={{ color: isActive ? moduleColor : 'var(--text-muted)' }} />
             )}
-            {IconComponent && <IconComponent size={currentStyle.iconSize} />}
+            {IconComponent && <IconComponent size={currentStyle.iconSize} style={{ color: moduleColor }} />}
             {!IconComponent && item.icon && (
-                <span style={{ fontSize: `${currentStyle.iconSize}px`, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: `${currentStyle.iconSize}px`, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: moduleColor }}>
                     {item.icon}
                 </span>
             )}
@@ -173,7 +206,7 @@ function MenuItem({ item, pathname, level = 1, expandedItems, toggleExpand }) {
             {hasChildren && isExpanded && (
                 <div className={styles.childrenContainer} style={{
                     background: level === 1 ? 'rgba(0, 0, 0, 0.015)' : 'transparent',
-                    borderLeft: level === 1 ? '2px solid rgba(37, 99, 235, 0.2)' : 'none',
+                    borderLeft: level === 1 ? `2px solid ${moduleColor}30` : 'none',
                     marginLeft: level === 1 ? 'var(--spacing-lg)' : '0',
                     paddingTop: level === 1 ? '2px' : '0',
                     paddingBottom: level === 1 ? '4px' : '0',
@@ -186,6 +219,7 @@ function MenuItem({ item, pathname, level = 1, expandedItems, toggleExpand }) {
                             level={level + 1}
                             expandedItems={expandedItems}
                             toggleExpand={toggleExpand}
+                            moduleColor={moduleColor}
                         />
                     ))}
                 </div>
@@ -274,6 +308,7 @@ export default function Sidebar() {
                                 level={1}
                                 expandedItems={expandedItems}
                                 toggleExpand={toggleExpand}
+                                moduleColor={MODULE_COLORS[item.label] || 'var(--primary)'}
                             />
                         ))}
                     </ul>
