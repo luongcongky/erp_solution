@@ -32,6 +32,7 @@ export async function POST(request) {
 
         return NextResponse.json({ success: true, data: newCompany });
     } catch (error) {
+        console.error('API Error:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 }

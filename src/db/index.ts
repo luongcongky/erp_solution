@@ -6,8 +6,10 @@ const { Pool } = pg;
 
 // Determine which database to use based on DB_PROVIDER
 // Smart fallback: In production, if DB_PROVIDER is not set but DATABASE_URL or SUPABASE_DATABASE_URL exists, use supabase
+// Smart fallback: If DB_PROVIDER is set, use it.
+// If not, and SUPABASE_DATABASE_URL exists, use 'supabase'.
 const dbProvider = process.env.DB_PROVIDER ||
-    (process.env.NODE_ENV === 'production' && (process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL) ? 'supabase' : 'local');
+    ((process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL) ? 'supabase' : 'local');
 
 // Database connection string based on provider
 const getConnectionString = () => {
@@ -23,6 +25,7 @@ const getConnectionString = () => {
 
 const connectionString = getConnectionString();
 
+console.log(`🔍 Debug: DB_PROVIDER env var is: '${process.env.DB_PROVIDER}'`);
 console.log(`🔧 Database Connection - Using: ${dbProvider.toUpperCase()} database`);
 console.log(`📍 Connection: ${connectionString?.replace(/:[^:@]+@/, ':***@') || 'NOT SET'}`);
 

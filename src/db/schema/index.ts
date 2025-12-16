@@ -22,7 +22,8 @@ export {
     auditLogs,
     partners,
     menus,
-    notifications
+    notifications,
+    companies
 } from './core';
 
 // Re-export commonly used tables from inventory
@@ -74,7 +75,9 @@ export type {
     Menu,
     NewMenu,
     Notification,
-    NewNotification
+    NewNotification,
+    Company,
+    NewCompany
 } from './core';
 
 export type {
