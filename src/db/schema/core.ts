@@ -167,6 +167,20 @@ export const notifications = coreSchema.table('notifications', {
 });
 
 
+
+// Companies table
+export const companies = coreSchema.table('companies', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    code: varchar('code', { length: 20 }).notNull().unique(), // Maps to tenId
+    name: varchar('name', { length: 100 }).notNull(),
+    address: text('address'),
+    phone: varchar('phone', { length: 50 }),
+    email: varchar('email', { length: 255 }),
+    isActive: boolean('is_active').default(true),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // Type exports for TypeScript
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -194,4 +208,8 @@ export type NewNotification = typeof notifications.$inferInsert;
 
 export type Menu = typeof menus.$inferSelect;
 export type NewMenu = typeof menus.$inferInsert;
+
+export type Company = typeof companies.$inferSelect;
+export type NewCompany = typeof companies.$inferInsert;
+
 

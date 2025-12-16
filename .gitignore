@@ -46,3 +46,9 @@ next-env.d.ts
 /scripts/
 !/scripts/seed-master-items-data.ts
 !/scripts/verify-master-items.ts
+!/scripts/reinitialize-supabase.js
+!/scripts/add-core-menu.js
+!/scripts/create-companies-table.sql
+!/scripts/create-companies-table.js
+
+

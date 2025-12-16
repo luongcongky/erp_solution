@@ -62,8 +62,8 @@ export function AuthProvider({ children }) {
 
                 updateActivity();
 
-                // Fetch latest user profile to get roles
-                if (parsedUser.id) {
+                // Fetch latest user profile to get roles (skip for SuperAdmin)
+                if (parsedUser.id && !parsedUser.isSuperAdmin) {
                     const headers = {};
                     if (parsedUser.company || parsedUser.ten_id) {
                         headers['x-tenant-id'] = parsedUser.ten_id || parsedUser.company?.ten_id || '1000';
@@ -162,7 +162,12 @@ export function AuthProvider({ children }) {
         if (!user && !isAuthPage && !isPublicPage && !isApiRoute) {
             router.push('/auth');
         } else if (user && isAuthPage) {
-            router.push('/');
+            // Redirect based on user role
+            if (user.isSuperAdmin) {
+                router.push('/core/companies');
+            } else {
+                router.push('/');
+            }
         }
     }, [user, loading, pathname, router]);
 
@@ -181,7 +186,12 @@ export function AuthProvider({ children }) {
             setActiveRole('user');
         }
 
-        router.push('/');
+        // Redirect Superadmin to Core Companies page
+        if (userData.isSuperAdmin) {
+            router.push('/core/companies');
+        } else {
+            router.push('/');
+        }
     };
 
     const switchRole = (newRole) => {

@@ -1,0 +1,26 @@
+.splitLayout {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    gap: var(--spacing-lg);
+    height: calc(100vh - 200px);
+}
+
+.leftPanel {
+    overflow-y: auto;
+}
+
+.rightPanel {
+    overflow-y: auto;
+}
+
+@media (max-width: 1024px) {
+    .splitLayout {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+
+    .leftPanel,
+    .rightPanel {
+        height: 500px;
+    }
+}

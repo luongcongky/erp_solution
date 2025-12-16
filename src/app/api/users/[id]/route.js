@@ -236,6 +236,7 @@ export async function GET(request, { params }) {
                 u.is_active as "isActive",
                 u.created_at as "createdAt",
                 CONCAT(u.first_name, ' ', u.last_name) as name,
+                c.name as "companyName",
                 COALESCE(
                     (SELECT STRING_AGG(r.name, ', ')
                      FROM "core"."user_roles" ur
@@ -249,6 +250,7 @@ export async function GET(request, { params }) {
                 END as status,
                 u.created_at as "lastLogin"
             FROM "core"."users" u
+            LEFT JOIN "core"."companies" c ON u.ten_id = c.code
             WHERE u.id = ${id}::uuid AND u.ten_id = ${ten_id} AND u.stg_id = ${stg_id}
         `);
 

@@ -74,7 +74,7 @@ export default function Header() {
                 </div>
 
                 {/* Company Selector */}
-                {mounted && user && user.company && (
+                {mounted && user && (user.companyName || user.company) && (
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -85,7 +85,9 @@ export default function Header() {
                         cursor: 'pointer',
                         fontSize: '0.875rem',
                     }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>{user.company.name}</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>
+                            {user.companyName || user.company?.name || 'Default Company'}
+                        </span>
                         <ChevronDownIcon size={16} />
                     </div>
                 )}

@@ -46,6 +46,7 @@ import {
     StockInIcon,
     StockOutIcon,
     StockBalanceIcon,
+    BuildingIcon,
     ChevronDownIcon,
     ChevronRightIcon
 } from '@/components/icons';
@@ -75,7 +76,8 @@ const ICON_MAP = {
     StockManagementIcon,
     StockInIcon,
     StockOutIcon,
-    StockBalanceIcon
+    StockBalanceIcon,
+    BuildingIcon
 };
 
 const renderIcon = (iconName) => {

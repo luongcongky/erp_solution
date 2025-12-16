@@ -5,6 +5,8 @@ import { useTranslations } from '@/hooks/useTranslations';
 import { InventoryIcon } from '@/components/icons';
 import Modal from '@/components/Modal';
 import '@/app/core/users/users.css'; // Import form styles
+import '@/styles/datatable-common.css';
+import '@/app/core/audit/audit.css'; // Reuse audit styles for consistent look
 import appConfig from '@/config/app.config';
 
 // Hardcoded UUIDs for Development (Matching Seed Data)
@@ -512,14 +514,6 @@ export default function ItemMasterPage() {
                     <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h3 className="card-title">{t('pages.items.list', 'Danh sách Items')}</h3>
                         <div style={{ display: 'flex', gap: 'var(--spacing-md)' }}>
-                            <button
-                                className="btn btn-primary"
-                                onClick={handleAddItem}
-                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                            >
-                                <span style={{ fontSize: '1.2rem', lineHeight: '1' }}>+</span>
-                                {t('pages.items.actions.create', 'Thêm mới')}
-                            </button>
                             <input
                                 type="text"
                                 placeholder={t('pages.items.searchPlaceholder', 'Tìm kiếm SKU, tên...')}
@@ -568,104 +562,112 @@ export default function ItemMasterPage() {
                                 {t('pages.items.noItems', 'Không tìm thấy item nào')}
                             </div>
                         ) : (
-                            <table className="table">
-                                <thead>
-                                    <tr>
-                                        <th>{t('pages.items.table.sku', 'SKU')}</th>
-                                        <th>{t('pages.items.table.name', 'Tên Item')}</th>
-                                        <th>{t('pages.items.table.group', 'Nhóm')}</th>
-                                        <th>{t('pages.items.table.category', 'Category')}</th>
-                                        <th>{t('pages.items.table.uom', 'UOM')}</th>
-                                        <th style={{ textAlign: 'center' }}>{t('pages.items.table.purchasable', 'Purchasable')}</th>
-                                        <th style={{ textAlign: 'center' }}>{t('pages.items.table.sellable', 'Sellable')}</th>
-                                        <th>{t('pages.items.table.cost', 'Giá vốn')}</th>
-                                        <th>{t('pages.items.table.price', 'Giá bán')}</th>
-                                        <th>{t('pages.items.table.status', 'Trạng thái')}</th>
-                                        <th>{t('pages.items.table.actions', 'Thao tác')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredItems.map((item) => (
-                                        <tr key={item.id}>
-                                            <td style={{ fontWeight: 600, color: 'var(--primary)', fontFamily: 'monospace' }}>
-                                                {item.sku}
-                                            </td>
-                                            <td style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
-                                                {item.name}
-                                            </td>
-                                            <td>{item.itemGroupName || '-'}</td>
-                                            <td>{item.itemCategoryName || '-'}</td>
-                                            <td>{item.baseUomCode || '-'}</td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <input type="checkbox" checked={item.isPurchaseItem} readOnly style={{ accentColor: 'var(--primary)' }} />
-                                            </td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <input type="checkbox" checked={item.isSalesItem} readOnly style={{ accentColor: 'var(--primary)' }} />
-                                            </td>
-                                            <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                                                ${item.standardCost || 0}
-                                            </td>
-                                            <td style={{ fontWeight: 600, color: 'var(--success)' }}>
-                                                ${item.defaultSellingPrice || 0}
-                                            </td>
-                                            <td>
-                                                <span className={`badge ${item.isActive ? 'badge-success' : 'badge-secondary'}`}>
-                                                    {item.isActive ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
-                                                </span>
-                                                {item.minStock !== null && (
-                                                    <span className="badge badge-warning" style={{ marginLeft: '4px' }}>
-                                                        Min: {Number(item.minStock)}
-                                                    </span>
-                                                )}
-                                                {item.maxStock !== null && (
-                                                    <span className="badge badge-info" style={{ marginLeft: '4px' }}>
-                                                        Max: {Number(item.maxStock)}
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td>
-                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                    <button
-                                                        className="btn btn-outline"
-                                                        style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem' }}
-                                                        onClick={() => handleEditItem(item)}
-                                                    >
-                                                        {t('common.edit', 'Sửa')}
-                                                    </button>
-                                                    <button
-                                                        className="btn btn-outline"
-                                                        style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem', color: 'var(--error)', borderColor: 'var(--error)' }}
-                                                        onClick={() => handleDeleteItem(item.id)}
-                                                    >
-                                                        {t('common.delete', 'Xóa')}
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                            <div className="tableContainer">
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table className="dataTable">
+                                        <thead className="tableHeader">
+                                            <tr>
+                                                <th className="tableHeaderCell">{t('pages.items.table.sku', 'SKU')}</th>
+                                                <th className="tableHeaderCell">{t('pages.items.table.name', 'ITEM NAME')}</th>
+                                                <th className="tableHeaderCell">{t('pages.items.table.group', 'GROUP')}</th>
+                                                <th className="tableHeaderCell">{t('pages.items.table.category', 'CATEGORY')}</th>
+                                                <th className="tableHeaderCell">{t('pages.items.table.uom', 'UOM')}</th>
+                                                <th className="tableHeaderCell" style={{ textAlign: 'center' }}>{t('pages.items.table.purchasable', 'PURCH')}</th>
+                                                <th className="tableHeaderCell" style={{ textAlign: 'center' }}>{t('pages.items.table.sellable', 'SELL')}</th>
+                                                <th className="tableHeaderCell">{t('pages.items.table.cost', 'COST')}</th>
+                                                <th className="tableHeaderCell">{t('pages.items.table.price', 'PRICE')}</th>
+                                                <th className="tableHeaderCell">{t('pages.items.table.status', 'STATUS')}</th>
+                                                <th className="tableHeaderCell">{t('pages.items.table.actions', 'ACTIONS')}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredItems.map((item, index) => (
+                                                <tr key={item.id} className={`tableRow ${index % 2 === 0 ? 'even' : 'odd'}`}>
+                                                    <td className="tableCell" style={{ fontWeight: 600, color: 'var(--primary)', fontFamily: 'monospace' }}>
+                                                        {item.sku}
+                                                    </td>
+                                                    <td className="tableCell" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                                                        {item.name}
+                                                    </td>
+                                                    <td className="tableCell">{item.itemGroupName || '-'}</td>
+                                                    <td className="tableCell">{item.itemCategoryName || '-'}</td>
+                                                    <td className="tableCell">{item.baseUomCode || '-'}</td>
+                                                    <td className="tableCell" style={{ textAlign: 'center' }}>
+                                                        <input type="checkbox" checked={item.isPurchaseItem} readOnly style={{ accentColor: 'var(--primary)' }} />
+                                                    </td>
+                                                    <td className="tableCell" style={{ textAlign: 'center' }}>
+                                                        <input type="checkbox" checked={item.isSalesItem} readOnly style={{ accentColor: 'var(--primary)' }} />
+                                                    </td>
+                                                    <td className="tableCell" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                                        ${item.standardCost || 0}
+                                                    </td>
+                                                    <td className="tableCell" style={{ fontWeight: 600, color: 'var(--success)' }}>
+                                                        ${item.defaultSellingPrice || 0}
+                                                    </td>
+                                                    <td className="tableCell">
+                                                        <span className={`statusBadge ${item.isActive ? 'active' : 'inactive'}`}>
+                                                            {item.isActive ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
+                                                        </span>
+                                                    </td>
+                                                    <td className="tableCell">
+                                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                            <button
+                                                                className="editButton"
+                                                                onClick={() => handleEditItem(item)}
+                                                            >
+                                                                {t('common.edit', 'Edit')}
+                                                            </button>
+                                                            <button
+                                                                className="deleteButton"
+                                                                onClick={() => handleDeleteItem(item.id)}
+                                                            >
+                                                                {t('common.delete', 'Delete')}
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         )}
 
                         {/* Pagination Controls */}
                         {filteredItems.length > 0 && (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', padding: '1rem', borderTop: '1px solid var(--border)' }}>
-                                <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                            <div className="paginationContainer">
+                                <div className="paginationInfo">
                                     {t('common.pagination.showing', 'Hiển thị')} {(page - 1) * limit + 1} - {Math.min(page * limit, totalRecords)} {t('common.pagination.of', 'trong')} {totalRecords} {t('common.pagination.records', 'bản ghi')}
                                 </div>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <div className="paginationControls">
                                     <button
-                                        className="btn btn-outline"
+                                        className="paginationButton"
                                         disabled={page === 1}
                                         onClick={() => setPage(p => Math.max(1, p - 1))}
                                     >
                                         {t('common.pagination.previous', 'Trước')}
                                     </button>
-                                    <div style={{ display: 'flex', alignItems: 'center', padding: '0 1rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>
-                                        {t('common.pagination.page', 'Trang')} {page} / {totalPages}
+                                    <div className="paginationNumbers">
+                                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                            let pageNum = i + 1;
+                                            if (totalPages > 5 && page > 3) {
+                                                pageNum = page - 2 + i;
+                                            }
+                                            if (pageNum > totalPages) return null;
+
+                                            return (
+                                                <button
+                                                    key={pageNum}
+                                                    onClick={() => setPage(pageNum)}
+                                                    className={`pageNumber ${pageNum === page ? 'active' : ''}`}
+                                                >
+                                                    {pageNum}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                     <button
-                                        className="btn btn-outline"
+                                        className="paginationButton"
                                         disabled={page === totalPages}
                                         onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                                     >

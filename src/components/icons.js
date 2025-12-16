@@ -284,3 +284,31 @@ export function StockManagementIcon({ size = 24, className = "", ...props }) {
         </svg>
     );
 }
+
+export function BuildingIcon({ size = 24, className = "", ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} {...props}>
+            <path d="M4 21V10L12 3L20 10V21H14V14H10V21H4ZM6 19H8V12H16V19H18V10.85L12 5.4L6 10.85V19Z" />
+        </svg>
+    );
+}
+
+export function PlusIcon({ size = 24, className = "", ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+    );
+}
+
+export function RefreshIcon({ size = 24, className = "", ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+    );
+}
+

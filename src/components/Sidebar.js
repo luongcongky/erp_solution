@@ -28,7 +28,8 @@ import {
     StockManagementIcon,
     StockInIcon,
     StockOutIcon,
-    StockBalanceIcon
+    StockBalanceIcon,
+    BuildingIcon
 } from './icons';
 import { isMenuItemOrChildActive, MODULE_COLORS } from '@/lib/utils/menuHelpers';
 import styles from './Sidebar.module.css';
@@ -58,7 +59,8 @@ const iconMap = {
     StockManagementIcon,
     StockInIcon,
     StockOutIcon,
-    StockBalanceIcon
+    StockBalanceIcon,
+    BuildingIcon
 };
 
 // Recursive menu item component

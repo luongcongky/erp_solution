@@ -42,7 +42,14 @@ export async function GET(request) {
 
         // Filter by role and build tree
         console.log('[MENUS] Filtering by role:', userRole);
-        const filteredMenus = filterMenuByRole(menusList, userRole);
+        let filteredMenus = filterMenuByRole(menusList, userRole);
+
+        // Filter inactive items
+        // The Sidebar uses this endpoint, so we only want active items.
+        // Management pages use /api/menus/admin which includes everything.
+        filteredMenus = filteredMenus.filter(item => item.isActive);
+        console.log('[MENUS] Filtered active menus:', filteredMenus.length);
+
         console.log('[MENUS] Filtered menus count:', filteredMenus.length);
 
         console.log('[MENUS] Building menu tree...');
