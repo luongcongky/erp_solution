@@ -18,16 +18,16 @@ import * as apiResponse from '@/lib/apiResponse';
  *           type: string
  */
 export async function GET(request, { params }) {
+    const { barcode } = await params;
     try {
         const tenantContext = extractTenantContext(request);
-        const { barcode } = params;
 
         const itemService = getItemService();
         const item = await itemService.lookupByBarcode(barcode, tenantContext);
 
         return apiResponse.success(item);
     } catch (error) {
-        console.error(`[API] Error looking up barcode ${params.barcode}:`, error);
+        console.error(`[API] Error looking up barcode ${barcode}:`, error);
         return apiResponse.error(error);
     }
 }

@@ -19,16 +19,16 @@ import * as apiResponse from '@/lib/apiResponse';
  *           format: uuid
  */
 export async function GET(request, { params }) {
+    const { id } = await params;
     try {
         const tenantContext = extractTenantContext(request);
-        const { id } = params;
 
         const itemService = getItemService();
         const item = await itemService.getItemById(id, tenantContext);
 
         return apiResponse.success(item.barcodes || []);
     } catch (error) {
-        console.error(`[API] Error fetching barcodes for item ${params.id}:`, error);
+        console.error(`[API] Error fetching barcodes for item ${id}:`, error);
         return apiResponse.error(error);
     }
 }
@@ -70,9 +70,9 @@ export async function GET(request, { params }) {
  *                 type: boolean
  */
 export async function POST(request, { params }) {
+    const { id } = await params;
     try {
         const tenantContext = extractTenantContext(request);
-        const { id } = params;
         const body = await request.json();
 
         const itemService = getItemService();
@@ -80,7 +80,7 @@ export async function POST(request, { params }) {
 
         return apiResponse.created(newBarcode);
     } catch (error) {
-        console.error(`[API] Error adding barcode to item ${params.id}:`, error);
+        console.error(`[API] Error adding barcode to item ${id}:`, error);
         return apiResponse.error(error);
     }
 }

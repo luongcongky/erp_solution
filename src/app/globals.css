@@ -290,6 +290,11 @@ h6 {
   color: var(--info);
 }
 
+.badge-secondary {
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--text-secondary);
+}
+
 /* Grid System */
 .grid {
   display: grid;

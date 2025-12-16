@@ -55,14 +55,18 @@ export async function GET(request) {
 
         const { searchParams } = new URL(request.url);
         const search = searchParams.get('search');
-        const itemType = searchParams.get('type');
+        const groupId = searchParams.get('groupId');
         const active = searchParams.get('active');
+        const hasMinStock = searchParams.get('hasMinStock');
+        const hasMaxStock = searchParams.get('hasMaxStock');
         const sort = searchParams.get('sort') || 'createdAt';
         const order = searchParams.get('order') || 'desc';
 
         const filters = {};
-        if (itemType) filters.itemType = itemType;
+        if (groupId) filters.itemGroupId = groupId;
         if (active !== null) filters.isActive = active === 'true';
+        if (hasMinStock === 'true') filters.hasMinStock = true;
+        if (hasMaxStock === 'true') filters.hasMaxStock = true;
 
         const itemService = getItemService();
         const result = await itemService.getAllItems(tenantContext, {

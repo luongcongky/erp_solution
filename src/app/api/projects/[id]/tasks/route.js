@@ -96,7 +96,7 @@ import { handleList, handleCreate } from '@/lib/legacy/apiHelpers.js';
  *         description: Server error
  */
 export async function GET(request, { params }) {
-    const { id } = params;
+    const { id } = await params;
 
     try {
         const taskList = await db.select()
@@ -114,7 +114,7 @@ export async function GET(request, { params }) {
 
 // POST /api/projects/[id]/tasks
 export async function POST(request, { params }) {
-    const { id } = params;
+    const { id } = await params;
 
     try {
         const body = await request.json();

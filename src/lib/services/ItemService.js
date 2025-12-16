@@ -25,31 +25,26 @@ export class ItemService extends BaseService {
         try {
             const { limit = 50, offset = 0, search, filters = {}, sort = 'createdAt', order = 'desc' } = options;
 
-            if (search) {
-                // Use search method
-                const data = await this.itemRepository.search(search, filters, tenantContext, {
+            // Always use search method to include relations (Item Group, UOM names)
+            const data = await this.itemRepository.search(search || '', filters, tenantContext, {
+                limit,
+                offset,
+                orderBy: sort,
+                orderDir: order
+            });
+
+            const total = await this.itemRepository.count({ ...filters, search }, tenantContext);
+
+            return {
+                data,
+                pagination: {
+                    total,
                     limit,
                     offset,
-                    orderBy: sort,
-                    orderDir: order
-                });
-
-                const total = await this.itemRepository.count(filters, tenantContext);
-
-                return {
-                    data,
-                    pagination: {
-                        total,
-                        limit,
-                        offset,
-                        page: Math.floor(offset / limit) + 1,
-                        totalPages: Math.ceil(total / limit)
-                    }
-                };
-            } else {
-                // Use standard findAll
-                return await this.getAll(tenantContext, { limit, offset, filters, orderBy: sort });
-            }
+                    page: Math.floor(offset / limit) + 1,
+                    totalPages: Math.ceil(total / limit)
+                }
+            };
         } catch (error) {
             this.log('error', 'Failed to get all items', error);
             throw error;
@@ -114,6 +109,18 @@ export class ItemService extends BaseService {
             return newItem;
         } catch (error) {
             this.log('error', 'Failed to create item', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get item groups
+     */
+    async getItemGroups(tenantContext) {
+        try {
+            return await this.itemRepository.getItemGroups(tenantContext);
+        } catch (error) {
+            this.log('error', 'Failed to get item groups', error);
             throw error;
         }
     }
@@ -324,6 +331,18 @@ export class ItemService extends BaseService {
             };
         } catch (error) {
             this.log('error', 'Failed to get low stock items', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get item statistics
+     */
+    async getItemStats(tenantContext) {
+        try {
+            return await this.itemRepository.getStats(tenantContext);
+        } catch (error) {
+            this.log('error', 'Failed to get item stats', error);
             throw error;
         }
     }

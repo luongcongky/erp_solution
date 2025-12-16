@@ -153,15 +153,37 @@ export class ItemRepository extends BaseRepository {
             if (filters.isSalesItem !== undefined) {
                 whereConditions += ` AND i.is_sales_item = ${filters.isSalesItem}`;
             }
+            // Stock Limit Filters
+            if (filters.hasMinStock === true) {
+                whereConditions += ` AND i.min_stock IS NOT NULL`;
+            }
+            if (filters.hasMaxStock === true) {
+                whereConditions += ` AND i.max_stock IS NOT NULL`;
+            }
 
             // Order by
-            const orderByClause = `i.${orderBy} ${orderDir.toUpperCase()}`;
+            const sortMapping = {
+                'createdAt': 'created_at',
+                'updatedAt': 'updated_at',
+                'minStock': 'min_stock',
+                'standardCost': 'standard_cost',
+                'defaultSellingPrice': 'default_selling_price',
+                'sku': 'sku',
+                'name': 'name'
+            };
+            const sortColumn = sortMapping[orderBy] || 'created_at';
+            const orderByClause = `i.${sortColumn} ${orderDir.toUpperCase()}`;
 
             const result = await this.db.execute(sql`
                 SELECT 
                     i.id, i.sku, i.name, i.short_name as "shortName",
-                    i.description, i.item_type as "itemType",
+                    i.description,
+                    i.item_group_id as "itemGroupId",
+                    i.item_category_id as "itemCategoryId",
+                    i.base_uom_id as "baseUomId",
                     i.is_active as "isActive",
+                    i.is_purchase_item as "isPurchaseItem",
+                    i.is_sales_item as "isSalesItem",
                     i.standard_cost as "standardCost",
                     i.default_selling_price as "defaultSellingPrice",
                     i.min_stock as "minStock", i.max_stock as "maxStock",
@@ -182,6 +204,43 @@ export class ItemRepository extends BaseRepository {
             return result.rows || [];
         } catch (error) {
             throw new DatabaseError('Failed to search items', error);
+        }
+    }
+
+
+
+    /**
+     * Count items with filters (override base)
+     */
+    async count(filters = {}, tenantContext) {
+        try {
+            const { ten_id, stg_id } = tenantContext;
+            let whereConditions = `i.ten_id = '${ten_id}' AND i.stg_id = '${stg_id}'`;
+
+            // Note: If 'search' query is passed via filters (service needs update to pass it), add it here.
+            // Currently Service calls count(filters), but search param is separate in Service options.
+            // Let's check Service.js getAllItems again. It calls count(filters). 
+            // So for now we only handle the structured filters.
+
+            if (filters.itemType) whereConditions += ` AND i.item_type = '${filters.itemType}'`;
+            if (filters.itemGroupId) whereConditions += ` AND i.item_group_id = '${filters.itemGroupId}'`;
+            if (filters.itemCategoryId) whereConditions += ` AND i.item_category_id = '${filters.itemCategoryId}'`;
+            if (filters.isActive !== undefined) whereConditions += ` AND i.is_active = ${filters.isActive}`;
+            if (filters.hasMinStock === true) whereConditions += ` AND i.min_stock IS NOT NULL`;
+            if (filters.hasMaxStock === true) whereConditions += ` AND i.max_stock IS NOT NULL`;
+
+            // Handle 'search' if it was theoretically passed in filters (though usually it's separate)
+            // Ideally we'd unify the where clause generation.
+
+            const result = await this.db.execute(sql`
+                SELECT count(*) as count
+                FROM inventory.items i
+                WHERE ${sql.raw(whereConditions)}
+            `);
+
+            return Number(result.rows[0]?.count || 0);
+        } catch (error) {
+            throw new DatabaseError('Failed to count items', error);
         }
     }
 
@@ -249,6 +308,81 @@ export class ItemRepository extends BaseRepository {
             return result.rows || [];
         } catch (error) {
             throw new DatabaseError('Failed to find low stock items', error);
+        }
+    }
+
+    /**
+     * Get item statistics
+     */
+    async getStats(tenantContext) {
+        try {
+            const { ten_id, stg_id } = tenantContext;
+            const conditions = and(
+                eq(items.tenId, ten_id),
+                eq(items.stgId, stg_id)
+            );
+
+            // Using separate queries for clarity and to avoid complex conditional aggregation quirks in Drizzle for now
+            // In a larger system, specialized analytics queries or materialized views would be better
+
+            const [totalResult] = await this.db
+                .select({ count: sql`count(*)` })
+                .from(items)
+                .where(conditions);
+
+            const [activeResult] = await this.db
+                .select({ count: sql`count(*)` })
+                .from(items)
+                .where(and(conditions, eq(items.isActive, true)));
+
+            const [minStockResult] = await this.db
+                .select({ count: sql`count(*)` })
+                .from(items)
+                .where(and(
+                    conditions,
+                    eq(items.isActive, true),
+                    sql`${items.minStock} IS NOT NULL`
+                ));
+
+            const [maxStockResult] = await this.db
+                .select({ count: sql`count(*)` })
+                .from(items)
+                .where(and(
+                    conditions,
+                    eq(items.isActive, true),
+                    sql`${items.maxStock} IS NOT NULL`
+                ));
+
+            return {
+                total: Number(totalResult?.count || 0),
+                active: Number(activeResult?.count || 0),
+                hasMinStock: Number(minStockResult?.count || 0),
+                hasMaxStock: Number(maxStockResult?.count || 0)
+            };
+        } catch (error) {
+            throw new DatabaseError('Failed to get item statistics', error);
+        }
+    }
+
+    /**
+     * Get all item groups
+     */
+    async getItemGroups(tenantContext) {
+        try {
+            const { ten_id, stg_id } = tenantContext;
+
+            const results = await this.db
+                .select()
+                .from(itemGroups)
+                .where(and(
+                    eq(itemGroups.tenId, ten_id),
+                    eq(itemGroups.stgId, stg_id)
+                ))
+                .orderBy(itemGroups.name);
+
+            return results;
+        } catch (error) {
+            throw new DatabaseError('Failed to get item groups', error);
         }
     }
 

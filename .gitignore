@@ -44,3 +44,5 @@ next-env.d.ts
 # local modifications
 /drizzle/
 /scripts/
+!/scripts/seed-master-items-data.ts
+!/scripts/verify-master-items.ts

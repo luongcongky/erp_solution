@@ -19,16 +19,16 @@ import * as apiResponse from '@/lib/apiResponse';
  *           format: uuid
  */
 export async function GET(request, { params }) {
+    const { id } = await params;
     try {
         const tenantContext = extractTenantContext(request);
-        const { id } = params;
 
         const itemService = getItemService();
         const item = await itemService.getItemById(id, tenantContext);
 
         return apiResponse.success(item);
     } catch (error) {
-        console.error(`[API] Error fetching item ${params.id}:`, error);
+        console.error(`[API] Error fetching item ${id}:`, error);
         return apiResponse.error(error);
     }
 }
@@ -67,9 +67,9 @@ export async function GET(request, { params }) {
  *                 type: number
  */
 export async function PUT(request, { params }) {
+    const { id } = await params;
     try {
         const tenantContext = extractTenantContext(request);
-        const { id } = params;
         const body = await request.json();
 
         const itemService = getItemService();
@@ -77,7 +77,7 @@ export async function PUT(request, { params }) {
 
         return apiResponse.success(updatedItem);
     } catch (error) {
-        console.error(`[API] Error updating item ${params.id}:`, error);
+        console.error(`[API] Error updating item ${id}:`, error);
         return apiResponse.error(error);
     }
 }
@@ -99,16 +99,16 @@ export async function PUT(request, { params }) {
  *           format: uuid
  */
 export async function DELETE(request, { params }) {
+    const { id } = await params;
     try {
         const tenantContext = extractTenantContext(request);
-        const { id } = params;
 
         const itemService = getItemService();
         await itemService.deleteItem(id, tenantContext);
 
         return apiResponse.noContent();
     } catch (error) {
-        console.error(`[API] Error deleting item ${params.id}:`, error);
+        console.error(`[API] Error deleting item ${id}:`, error);
         return apiResponse.error(error);
     }
 }

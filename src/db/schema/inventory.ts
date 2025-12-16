@@ -79,6 +79,19 @@ export const priceLists = inventorySchema.table('price_lists', {
 // ENHANCED ITEMS TABLE
 // ============================================
 
+// Warehouses table
+export const warehouses = inventorySchema.table('warehouses', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    code: varchar('code', { length: 50 }).notNull().unique(),
+    name: varchar('name', { length: 200 }).notNull(),
+    address: jsonb('address'),
+    isActive: boolean('is_active').default(true),
+    tenId: varchar('ten_id', { length: 20 }).notNull(),
+    stgId: varchar('stg_id', { length: 20 }).default('DEV'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 export const items = inventorySchema.table('items', {
     id: uuid('id').primaryKey().defaultRandom(),
 
@@ -119,11 +132,11 @@ export const items = inventorySchema.table('items', {
     hasBom: boolean('has_bom').default(false),
 
     // Inventory Control
-    minStock: decimal('min_stock', { precision: 18, scale: 4 }).default('0'),
-    maxStock: decimal('max_stock', { precision: 18, scale: 4 }).default('0'),
-    reorderPoint: decimal('reorder_point', { precision: 18, scale: 4 }).default('0'),
-    reorderQty: decimal('reorder_qty', { precision: 18, scale: 4 }).default('0'),
-    safetyStock: decimal('safety_stock', { precision: 18, scale: 4 }).default('0'),
+    minStock: decimal('min_stock', { precision: 18, scale: 4 }),
+    maxStock: decimal('max_stock', { precision: 18, scale: 4 }),
+    reorderPoint: decimal('reorder_point', { precision: 18, scale: 4 }),
+    reorderQty: decimal('reorder_qty', { precision: 18, scale: 4 }),
+    safetyStock: decimal('safety_stock', { precision: 18, scale: 4 }),
     abcClassification: abcClassificationEnum('abc_classification'),
 
     // Quality Control
@@ -146,6 +159,24 @@ export const items = inventorySchema.table('items', {
 
     // Images
     primaryImageUrl: varchar('primary_image_url', { length: 500 }),
+
+    // Identification (Extended)
+    externalCode: varchar('external_code', { length: 100 }),
+
+    // Classification (Extended)
+    brand: varchar('brand', { length: 100 }),
+
+    // Inventory Settings (Extended)
+    defaultWarehouseId: uuid('default_warehouse_id').references(() => warehouses.id),
+
+    // Costing & Pricing (Extended)
+    currency: varchar('currency', { length: 3 }).default('USD'),
+    taxName: varchar('tax_name', { length: 50 }),
+    taxRate: decimal('tax_rate', { precision: 5, scale: 2 }).default('0'),
+
+    // Storage Rules
+    storageTemp: varchar('storage_temp', { length: 50 }),
+    storageHumidity: varchar('storage_humidity', { length: 50 }),
 
     // Metadata
     notes: text('notes'),
@@ -288,18 +319,7 @@ export const itemVariants = inventorySchema.table('item_variants', {
 // EXISTING TABLES (KEPT AS-IS)
 // ============================================
 
-// Warehouses table
-export const warehouses = inventorySchema.table('warehouses', {
-    id: uuid('id').primaryKey().defaultRandom(),
-    code: varchar('code', { length: 50 }).notNull().unique(),
-    name: varchar('name', { length: 200 }).notNull(),
-    address: jsonb('address'),
-    isActive: boolean('is_active').default(true),
-    tenId: varchar('ten_id', { length: 20 }).notNull(),
-    stgId: varchar('stg_id', { length: 20 }).default('DEV'),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+
 
 // Locations table
 export const locations = inventorySchema.table('locations', {
