@@ -226,10 +226,12 @@ export default function MenusPage() {
                 'x-user-role': (activeRole || user?.role || 'admin').toLowerCase(),
             };
 
-            if (user?.company) {
-                headers['x-tenant-id'] = user.company.ten_id || '1000';
-                headers['x-stage-id'] = user.company.stg_id || 'DEV';
-            }
+            // Prioritize ten_id/stg_id from user object, then company object, then defaults
+            const tenId = user.ten_id || user.company?.ten_id || '1000';
+            const stgId = user.stg_id || user.company?.stg_id || 'DEV';
+
+            headers['x-tenant-id'] = tenId;
+            headers['x-stage-id'] = stgId;
             console.log('MenusPage: Fetching /api/menus/admin with headers:', headers);
 
             const response = await fetch('/api/menus/admin', { headers });
@@ -451,10 +453,12 @@ export default function MenusPage() {
                 'x-user-role': (activeRole || user?.role || 'admin').toLowerCase(),
             };
 
-            if (user?.company) {
-                headers['x-tenant-id'] = user.company.ten_id || '1000';
-                headers['x-stage-id'] = user.company.stg_id || 'DEV';
-            }
+            // Prioritize ten_id/stg_id from user object, then company object, then defaults
+            const tenId = user.ten_id || user.company?.ten_id || '1000';
+            const stgId = user.stg_id || user.company?.stg_id || 'DEV';
+
+            headers['x-tenant-id'] = tenId;
+            headers['x-stage-id'] = stgId;
 
             const url = '/api/menus/admin';
             const method = editingMenu ? 'PUT' : 'POST';

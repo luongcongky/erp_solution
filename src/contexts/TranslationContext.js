@@ -21,12 +21,28 @@ export function TranslationProvider({ children }) {
             setLoading(true);
             try {
                 console.log('[TranslationContext] Fetching translations for:', locale);
+                const headers = {
+                    'Pragma': 'no-cache',
+                    'Cache-Control': 'no-cache'
+                };
+
+                // Add tenant context from localStorage
+                if (typeof window !== 'undefined') {
+                    const userData = localStorage.getItem('user');
+                    if (userData) {
+                        try {
+                            const user = JSON.parse(userData);
+                            if (user.ten_id) headers['x-tenant-id'] = user.ten_id;
+                            if (user.stg_id) headers['x-stage-id'] = user.stg_id;
+                        } catch (e) {
+                            console.error('Error parsing user data for translations:', e);
+                        }
+                    }
+                }
+
                 const response = await fetch(`/api/translations/${locale}`, {
                     cache: 'no-store',
-                    headers: {
-                        'Pragma': 'no-cache',
-                        'Cache-Control': 'no-cache'
-                    }
+                    headers: headers
                 });
                 const result = await response.json();
 

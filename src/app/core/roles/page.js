@@ -40,9 +40,24 @@ export default function RolesPage() {
         fetchRoles();
     }, []);
 
+    const getAuthHeaders = () => {
+        const headers = { 'Content-Type': 'application/json' };
+        const userData = localStorage.getItem('user');
+        if (userData) {
+            try {
+                const user = JSON.parse(userData);
+                if (user.ten_id) headers['x-tenant-id'] = user.ten_id;
+                if (user.stg_id) headers['x-stage-id'] = user.stg_id;
+            } catch (e) { console.error(e); }
+        }
+        return headers;
+    };
+
     const fetchRoles = async () => {
         try {
-            const response = await fetch('/api/roles');
+            const response = await fetch('/api/roles', {
+                headers: getAuthHeaders()
+            });
             const data = await response.json();
             if (data.success) {
                 setRoles(data.data);
@@ -64,7 +79,9 @@ export default function RolesPage() {
         setSelectedRoleUsers([]); // Clear previous data
 
         try {
-            const response = await fetch(`/api/roles/${role.id}/users`);
+            const response = await fetch(`/api/roles/${role.id}/users`, {
+                headers: getAuthHeaders()
+            });
             const result = await response.json();
             if (result.success) {
                 setSelectedRoleUsers(result.data);
@@ -81,7 +98,8 @@ export default function RolesPage() {
 
         try {
             const response = await fetch(`/api/roles/${selectedRoleId}/users/${user.id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: getAuthHeaders()
             });
             const result = await response.json();
 
@@ -146,7 +164,7 @@ export default function RolesPage() {
 
             const response = await fetch(url, {
                 method: method,
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(formData)
             });
 
@@ -187,7 +205,8 @@ export default function RolesPage() {
 
         try {
             const response = await fetch(`/api/roles/${role.id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: getAuthHeaders()
             });
             const result = await response.json();
 

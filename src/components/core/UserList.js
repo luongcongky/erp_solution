@@ -7,6 +7,7 @@ import '@/styles/datatable-common.css';
 import '@/app/core/users/users.css';
 import { ACTION_TYPES } from '@/config/action.config';
 import Modal from '@/components/Modal';
+import MultiSelect from '@/components/MultiSelect';
 
 export default function UserList({ selectedCompany }) {
     const [users, setUsers] = useState([]);
@@ -25,6 +26,8 @@ export default function UserList({ selectedCompany }) {
 
     // Modal state
     const [showModal, setShowModal] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingUserId, setEditingUserId] = useState(null);
     const [formData, setFormData] = useState({
         email: '',
         firstName: '',
@@ -77,7 +80,16 @@ export default function UserList({ selectedCompany }) {
 
     const fetchRoles = async () => {
         try {
-            const response = await fetch('/api/roles');
+            const headers = {};
+            const userData = localStorage.getItem('user');
+            if (userData) {
+                try {
+                    const user = JSON.parse(userData);
+                    if (user.ten_id) headers['x-tenant-id'] = user.ten_id;
+                    if (user.stg_id) headers['x-stage-id'] = user.stg_id;
+                } catch (e) { console.error(e); }
+            }
+            const response = await fetch('/api/roles', { headers });
             const result = await response.json();
             if (result.success) {
                 setAvailableRoles(result.data);
@@ -166,6 +178,8 @@ export default function UserList({ selectedCompany }) {
     const paginatedData = sortedData.slice(startIndex, startIndex + pageSize);
 
     const handleAddUser = () => {
+        setIsEditing(false);
+        setEditingUserId(null);
         setFormData({
             email: '',
             firstName: '',
@@ -177,6 +191,39 @@ export default function UserList({ selectedCompany }) {
         setFormErrors({});
         setShowPassword(false);
         setShowModal(true);
+    };
+
+    const handleEditUser = async (user) => {
+        setIsEditing(true);
+        setEditingUserId(user.id);
+
+        // Initial data from list while loading full details
+        setFormData({
+            email: user.email,
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            password: '', // Password not editable here
+            roleIds: [], // Will be populated by fetch
+            isActive: user.isActive
+        });
+        setFormErrors({});
+        setShowModal(true);
+
+        // Fetch user details to get roleIds
+        try {
+            const res = await fetch(`/api/core/users/${user.id}`);
+            const data = await res.json();
+            if (data.success) {
+                setFormData(prev => ({
+                    ...prev,
+                    roleIds: data.data.roleIds || []
+                }));
+            } else {
+                console.error('Failed to fetch user details:', data.error);
+            }
+        } catch (error) {
+            console.error('Error fetching user details:', error);
+        }
     };
 
     const validateForm = () => {
@@ -192,10 +239,13 @@ export default function UserList({ selectedCompany }) {
             errors.firstName = 'First name is required';
         }
 
-        if (!formData.password || formData.password.trim() === '') {
-            errors.password = 'Password is required for new users';
-        } else if (formData.password.length < 8) {
-            errors.password = 'Password must be at least 8 characters';
+        // Password required only for new users
+        if (!isEditing) {
+            if (!formData.password || formData.password.trim() === '') {
+                errors.password = 'Password is required for new users';
+            } else if (formData.password.length < 8) {
+                errors.password = 'Password must be at least 8 characters';
+            }
         }
 
         setFormErrors(errors);
@@ -223,21 +273,52 @@ export default function UserList({ selectedCompany }) {
                 email: formData.email,
                 firstName: formData.firstName,
                 lastName: formData.lastName,
-                password: formData.password,
                 roleIds: formData.roleIds,
                 isActive: formData.isActive
             };
 
-            const res = await fetch(`/api/core/companies/${selectedCompany.id}/users`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            let url, method;
+
+            if (isEditing) {
+                // Update
+                url = `/api/core/users/${editingUserId}`;
+                method = 'PUT';
+            } else {
+                // Create
+                url = `/api/core/companies/${selectedCompany.id}/users`;
+                method = 'POST';
+                payload.password = formData.password; // Include password only for create
+            }
+
+            // Construct headers
+            const headers = { 'Content-Type': 'application/json' };
+            // Try to get user from localStorage for fallback or use selectedCompany if available
+            try {
+                const userData = localStorage.getItem('user');
+                if (userData) {
+                    const user = JSON.parse(userData);
+                    if (user.ten_id) headers['x-tenant-id'] = user.ten_id;
+                    if (user.stg_id) headers['x-stage-id'] = user.stg_id;
+                }
+            } catch (e) { console.error(e); }
+
+            // Fallback to selectedCompany if headers are still not set (though UserList usually runs in context of a company)
+            if (!headers['x-tenant-id'] && selectedCompany.code) {
+                headers['x-tenant-id'] = selectedCompany.code;
+            }
+
+
+            const res = await fetch(url, {
+                method: method,
+                headers: headers,
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
             if (data.success) {
-                // Refresh list or add partially (re-fetching is safer for DB defaults)
+                // Refresh list
                 await fetchUsers();
                 setShowModal(false);
+                // Reset form
                 setFormData({
                     email: '',
                     firstName: '',
@@ -250,7 +331,7 @@ export default function UserList({ selectedCompany }) {
                 setFormErrors({ submit: data.error || 'Failed to save user' });
             }
         } catch (error) {
-            console.error('Error creating user:', error);
+            console.error('Error saving user:', error);
             setFormErrors({ submit: 'An error occurred while saving the user' });
         } finally {
             setSubmitting(false);
@@ -457,14 +538,22 @@ export default function UserList({ selectedCompany }) {
                                             </div>
                                         </td>
                                         <td className="tableCell">
-                                            <button
-                                                className="btn btn-sm btn-outline"
-                                                onClick={() => handleResetPassword(user.id)}
-                                                title="Reset password to 123456"
-                                                style={{ fontSize: '0.75rem', padding: '4px 8px' }}
-                                            >
-                                                Reset Password
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button
+                                                    className="editButton"
+                                                    onClick={() => handleEditUser(user)}
+                                                    title="Edit User"
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    className="resetButton"
+                                                    onClick={() => handleResetPassword(user.id)}
+                                                    title="Reset password to 123456"
+                                                >
+                                                    Reset
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -516,11 +605,11 @@ export default function UserList({ selectedCompany }) {
                 </div>
             </div>
 
-            {/* Add User Modal */}
+            {/* Add/Edit User Modal */}
             <Modal
                 isOpen={showModal}
                 onClose={() => setShowModal(false)}
-                title="Add New User"
+                title={isEditing ? "Edit User" : "Add New User"}
                 maxWidth="650px"
                 footer={
                     <>
@@ -538,7 +627,7 @@ export default function UserList({ selectedCompany }) {
                             disabled={submitting}
                             onClick={handleSubmit}
                         >
-                            {submitting ? 'Creating...' : 'Create User'}
+                            {submitting ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update User' : 'Create User')}
                         </button>
                     </>
                 }
@@ -598,58 +687,54 @@ export default function UserList({ selectedCompany }) {
                             />
                         </div>
 
-                        <div className="formGroup fullWidth">
-                            <label htmlFor="password">
-                                Password <span className="required">*</span>
-                            </label>
-                            <div style={{ position: 'relative' }}>
-                                <input
-                                    id="password"
-                                    type={showPassword ? 'text' : 'password'}
-                                    className={`formInput ${formErrors.password ? 'error' : ''}`}
-                                    value={formData.password}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                                    placeholder="Min 8 characters"
-                                    disabled={submitting}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    style={{
-                                        position: 'absolute',
-                                        right: '10px',
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        background: 'none',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        color: '#6b7280'
-                                    }}
-                                >
-                                    {showPassword ? '🙈' : '👁️'}
-                                </button>
+                        {!isEditing && (
+                            <div className="formGroup fullWidth">
+                                <label htmlFor="password">
+                                    Password <span className="required">*</span>
+                                </label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        id="password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        className={`formInput ${formErrors.password ? 'error' : ''}`}
+                                        value={formData.password}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                                        placeholder="Min 8 characters"
+                                        disabled={submitting}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        style={{
+                                            position: 'absolute',
+                                            right: '10px',
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            background: 'none',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            color: '#6b7280'
+                                        }}
+                                    >
+                                        {showPassword ? '🙈' : '👁️'}
+                                    </button>
+                                </div>
+                                {formErrors.password && (
+                                    <span className="fieldError">{formErrors.password}</span>
+                                )}
                             </div>
-                            {formErrors.password && (
-                                <span className="fieldError">{formErrors.password}</span>
-                            )}
-                        </div>
+                        )}
                     </div>
 
                     <div className="formGroup" style={{ marginTop: '1.5rem' }}>
                         <label>Roles</label>
-                        <div className="roleSelection">
-                            {availableRoles.map(role => (
-                                <label key={role.id} className="roleCheckbox">
-                                    <input
-                                        type="checkbox"
-                                        checked={formData.roleIds.includes(role.id)}
-                                        onChange={() => handleRoleToggle(role.id)}
-                                        disabled={submitting}
-                                    />
-                                    <span>{role.name}</span>
-                                </label>
-                            ))}
-                        </div>
+                        <MultiSelect
+                            options={availableRoles}
+                            value={formData.roleIds}
+                            onChange={(newRoleIds) => setFormData(prev => ({ ...prev, roleIds: newRoleIds }))}
+                            placeholder="Select roles..."
+                            disabled={submitting}
+                        />
                     </div>
 
                     <div className="formGroup" style={{ marginTop: '1.5rem' }}>

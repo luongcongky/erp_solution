@@ -66,6 +66,7 @@ export function AuthProvider({ children }) {
                 if (parsedUser.id && !parsedUser.isSuperAdmin) {
                     const headers = {};
                     if (parsedUser.company || parsedUser.ten_id) {
+                        // Prioritize ten_id/stg_id from user object, then company object, then defaults
                         headers['x-tenant-id'] = parsedUser.ten_id || parsedUser.company?.ten_id || '1000';
                         headers['x-stage-id'] = parsedUser.stg_id || parsedUser.company?.stg_id || 'DEV';
                     }

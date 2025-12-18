@@ -249,10 +249,13 @@ export default function Sidebar() {
                     if (activeRole) {
                         headers['x-user-role'] = activeRole;
                     }
-                    if (user.company) {
-                        headers['x-tenant-id'] = user.company.ten_id || '1000';
-                        headers['x-stage-id'] = user.company.stg_id || 'DEV';
-                    }
+
+                    // Prioritize ten_id/stg_id from user object, then company object, then defaults
+                    const tenId = user.ten_id || user.company?.ten_id || '1000';
+                    const stgId = user.stg_id || user.company?.stg_id || 'DEV';
+
+                    headers['x-tenant-id'] = tenId;
+                    headers['x-stage-id'] = stgId;
                 }
                 const response = await fetch('/api/menus', { headers });
                 if (!response.ok) throw new Error('Failed to fetch menus');

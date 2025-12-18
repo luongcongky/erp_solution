@@ -118,6 +118,21 @@
     background: rgba(239, 68, 68, 0.1);
 }
 
+.resetButton {
+    font-size: 0.75rem;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid #F59E0B;
+    color: #F59E0B;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.resetButton:hover {
+    background: rgba(245, 158, 11, 0.1);
+}
+
 /* ========================================
    ROLE BADGES
    ======================================== */

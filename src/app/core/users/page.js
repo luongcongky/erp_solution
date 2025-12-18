@@ -9,6 +9,7 @@ import './users.css';
 import { useEventTracking } from '@/hooks/useEventTracking';
 import { ACTION_TYPES } from '@/config/action.config';
 import Modal from '@/components/Modal';
+import MultiSelect from '@/components/MultiSelect';
 
 export default function UsersPage() {
     const [users, setUsers] = useState([]);
@@ -53,7 +54,16 @@ export default function UsersPage() {
 
     const fetchUsers = async () => {
         try {
-            const response = await fetch('/api/users');
+            const headers = {};
+            const userData = localStorage.getItem('user');
+            if (userData) {
+                try {
+                    const user = JSON.parse(userData);
+                    if (user.ten_id) headers['x-tenant-id'] = user.ten_id;
+                    if (user.stg_id) headers['x-stage-id'] = user.stg_id;
+                } catch (e) { console.error(e); }
+            }
+            const response = await fetch('/api/users', { headers });
             const result = await response.json();
 
             if (result.success) {
@@ -70,7 +80,16 @@ export default function UsersPage() {
 
     const fetchRoles = async () => {
         try {
-            const response = await fetch('/api/roles');
+            const headers = {};
+            const userData = localStorage.getItem('user');
+            if (userData) {
+                try {
+                    const user = JSON.parse(userData);
+                    if (user.ten_id) headers['x-tenant-id'] = user.ten_id;
+                    if (user.stg_id) headers['x-stage-id'] = user.stg_id;
+                } catch (e) { console.error(e); }
+            }
+            const response = await fetch('/api/roles', { headers });
             const result = await response.json();
             if (result.success) {
                 setAvailableRoles(result.data);
@@ -107,7 +126,16 @@ export default function UsersPage() {
 
         // Fetch user's current roles
         try {
-            const response = await fetch(`/api/users/${user.id}/roles`);
+            const headers = {};
+            const userData = localStorage.getItem('user');
+            if (userData) {
+                try {
+                    const user = JSON.parse(userData);
+                    if (user.ten_id) headers['x-tenant-id'] = user.ten_id;
+                    if (user.stg_id) headers['x-stage-id'] = user.stg_id;
+                } catch (e) { console.error(e); }
+            }
+            const response = await fetch(`/api/users/${user.id}/roles`, { headers });
             const result = await response.json();
             const userRoleIds = result.success ? result.data.map(r => r.id) : [];
 
@@ -189,9 +217,19 @@ export default function UsersPage() {
                 payload.password = formData.password;
             }
 
+            const headers = { 'Content-Type': 'application/json' };
+            const userData = localStorage.getItem('user');
+            if (userData) {
+                try {
+                    const user = JSON.parse(userData);
+                    if (user.ten_id) headers['x-tenant-id'] = user.ten_id;
+                    if (user.stg_id) headers['x-stage-id'] = user.stg_id;
+                } catch (e) { console.error(e); }
+            }
+
             const response = await fetch(url, {
                 method: method,
-                headers: { 'Content-Type': 'application/json' },
+                headers: headers,
                 body: JSON.stringify(payload)
             });
 
@@ -702,19 +740,13 @@ export default function UsersPage() {
 
                     <div className="formGroup" style={{ marginTop: '1.5rem' }}>
                         <label>Roles</label>
-                        <div className="roleSelection">
-                            {availableRoles.map(role => (
-                                <label key={role.id} className="roleCheckbox">
-                                    <input
-                                        type="checkbox"
-                                        checked={formData.roleIds.includes(role.id)}
-                                        onChange={() => handleRoleToggle(role.id)}
-                                        disabled={submitting}
-                                    />
-                                    <span>{role.name}</span>
-                                </label>
-                            ))}
-                        </div>
+                        <MultiSelect
+                            options={availableRoles}
+                            value={formData.roleIds}
+                            onChange={(newRoleIds) => setFormData(prev => ({ ...prev, roleIds: newRoleIds }))}
+                            placeholder="Select roles..."
+                            disabled={submitting}
+                        />
                     </div>
 
                     <div className="formGroup" style={{ marginTop: '1.5rem' }}>

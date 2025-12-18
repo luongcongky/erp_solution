@@ -18,7 +18,20 @@ export default function LanguageSwitcher({ variant = 'buttons' }) {
     useEffect(() => {
         const fetchLanguages = async () => {
             try {
-                const response = await fetch('/api/languages');
+                const headers = {};
+                // Get user info from localStorage to set tenant context
+                if (typeof window !== 'undefined') {
+                    const userData = localStorage.getItem('user');
+                    if (userData) {
+                        try {
+                            const user = JSON.parse(userData);
+                            if (user.ten_id) headers['x-tenant-id'] = user.ten_id;
+                            if (user.stg_id) headers['x-stage-id'] = user.stg_id;
+                        } catch (e) { console.error(e); }
+                    }
+                }
+
+                const response = await fetch('/api/languages', { headers });
                 const result = await response.json();
                 if (result.success) {
                     setLanguages(result.data);
