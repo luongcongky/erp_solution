@@ -4,49 +4,27 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from '@/hooks/useTranslations';
 import { InventoryIcon } from '@/components/icons';
 import Modal from '@/components/Modal';
-import '@/app/core/users/users.css'; // Import form styles
 import '@/styles/datatable-common.css';
+import '@/app/core/users/users.css'; // Import form styles
 import '@/app/core/audit/audit.css'; // Reuse audit styles for consistent look
+import MultiSelect from '@/components/MultiSelect';
 import appConfig from '@/config/app.config';
 
 // Hardcoded UUIDs for Development (Matching Seed Data)
-const CATEGORIES = [
-    { id: '11111111-1111-1111-1111-111111111111', name: 'Electronics' },
-    { id: '11111111-1111-1111-1111-111111111112', name: 'Mechanical' },
-    { id: '11111111-1111-1111-1111-111111111113', name: 'Raw Materials' }
-];
-
-const BRANDS = [
-    { id: '22222222-2222-2222-2222-222222222221', name: 'Generic' },
-    { id: '22222222-2222-2222-2222-222222222222', name: 'Premium' }
-];
-
-const UOMS = [
-    { id: '33333333-3333-3333-3333-333333333331', code: 'PCS', name: 'Pieces' },
-    { id: '33333333-3333-3333-3333-333333333332', code: 'KG', name: 'Kilogram' },
-    { id: '33333333-3333-3333-3333-333333333333', code: 'M', name: 'Meter' },
-    { id: '33333333-3333-3333-3333-333333333334', code: 'BOX', name: 'Box' }
-];
-
-const WAREHOUSES = [
-    { id: '44444444-4444-4444-4444-444444444441', name: 'Main Warehouse' },
-    { id: '44444444-4444-4444-4444-444444444442', name: 'Production Store' }
-];
-
-const CURRENCIES = ['USD', 'VND', 'EUR'];
+// Hardcoded constants for lists/dropdowns
+const BRANDS = [];
 const TAX_RATES = [
-    { name: 'VAT 10%', rate: 10 },
-    { name: 'VAT 8%', rate: 8 },
-    { name: 'VAT 5%', rate: 5 },
-    { name: 'Non-VAT', rate: 0 }
+    { name: 'None (0%)', rate: 0 },
+    { name: 'VAT (10%)', rate: 10 },
+    { name: 'VAT (8%)', rate: 8 },
+    { name: 'VAT (5%)', rate: 5 }
 ];
 
 export default function ItemMasterPage() {
     const [items, setItems] = useState([]);
     const [loadingData, setLoadingData] = useState(true);
+    // ... existing stats state ...
     const [stats, setStats] = useState({
-        total: 0,
-        active: 0,
         total: 0,
         active: 0,
         hasMinStock: 0,
@@ -56,11 +34,31 @@ export default function ItemMasterPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterGroup, setFilterGroup] = useState('all');
     const [itemGroups, setItemGroups] = useState([]);
+
+    // Master Data States
+    const [categories, setCategories] = useState([]);
+    const [uoms, setUoms] = useState([]);
+    const [warehouses, setWarehouses] = useState([]);
+    const [currencies, setCurrencies] = useState([
+        { id: 'USD', name: 'US Dollar', code: 'USD' },
+        { id: 'VND', name: 'Vietnamese Dong', code: 'VND' },
+        { id: 'EUR', name: 'Euro', code: 'EUR' }
+    ]);
+
     const [filterStatus, setFilterStatus] = useState('all');
     const [showItemModal, setShowItemModal] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [activeTab, setActiveTab] = useState('identification');
     const [dragActive, setDragActive] = useState(false);
+
+    // Creation Modal States
+    const [creationModal, setCreationModal] = useState({
+        isOpen: false,
+        type: null, // 'group', 'category', 'uom', 'warehouse'
+        title: ''
+    });
+    const [creationFormData, setCreationFormData] = useState({});
+    const [creationErrors, setCreationErrors] = useState({});
 
     // Pagination State
     const [page, setPage] = useState(1);
@@ -84,22 +82,21 @@ export default function ItemMasterPage() {
 
         // Inventory Settings
         baseUomId: '',
-        baseUomId: '',
         minStock: '',
         maxStock: '',
-        reorderPoint: 0,
+        reorderPoint: '',
         settings_defaultWarehouseId: '',
 
         // Costing & Pricing
-        standardCost: 0,
-        defaultSellingPrice: 0,
+        standardCost: '',
+        defaultSellingPrice: '',
         currency: 'USD',
-        taxRate: 0,
+        taxRate: '',
 
         // Tracking / Compliance
         tracking: 'none',
         expiryControl: false,
-        shelfLifeDays: 0,
+        shelfLifeDays: '',
         storageTemp: '',
         storageHumidity: '',
 
@@ -116,26 +113,214 @@ export default function ItemMasterPage() {
     const [submitting, setSubmitting] = useState(false);
     const { t, loading: loadingTranslations } = useTranslations();
 
+    const getAuthHeaders = () => {
+        try {
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                // Priority: Direct user property > Company property > Default
+                const tenId = user.ten_id || user.company?.ten_id || '1000';
+                const stgId = user.stg_id || user.company?.stg_id || 'DEV';
+
+                return {
+                    'x-tenant-id': tenId,
+                    'x-stage-id': stgId,
+                    'Content-Type': 'application/json'
+                };
+            }
+        } catch (e) {
+            console.error('Error parsing user from localStorage', e);
+        }
+        return {
+            'x-tenant-id': '1000',
+            'x-stage-id': 'DEV',
+            'Content-Type': 'application/json'
+        };
+    };
+
     useEffect(() => {
         fetchItems();
     }, [page, limit, searchTerm, filterGroup, filterStatus, activeFilter]); // Refetch when dependencies change
 
     useEffect(() => {
         fetchStats();
-        fetchGroups();
-    }, []); // Fetch stats once on mount (or could reload on item changes)
+        fetchMasterData();
+    }, []);
 
-    // Cleanup object URLs to avoid memory leaks
-    useEffect(() => {
-        return () => {
-            formData.images?.forEach(img => {
-                if (img.url.startsWith('blob:')) {
-                    URL.revokeObjectURL(img.url);
-                }
+    const fetchMasterData = async () => {
+        try {
+            const headers = getAuthHeaders();
+            const [groupsRes, categoriesRes, uomsRes, warehousesRes] = await Promise.all([
+                fetch('/api/items/groups', { headers }),
+                fetch('/api/items/categories', { headers }), // We need to check if this endpoint exists/returns all
+                fetch('/api/inventory/uoms', { headers }),
+                fetch('/api/inventory/warehouses', { headers })
+            ]);
+
+            const [groups, categories, uoms, warehouses] = await Promise.all([
+                groupsRes.json(),
+                categoriesRes.json(),
+                uomsRes.json(),
+                warehousesRes.json()
+            ]);
+
+            if (groups.success) setItemGroups(groups.data);
+            if (categories.success) setCategories(categories.data);
+            if (uoms.success) setUoms(uoms.data);
+            if (warehouses.success) setWarehouses(warehouses.data);
+
+        } catch (error) {
+            console.error('Error fetching master data:', error);
+        }
+    };
+
+    // Creation Handlers
+    const handleOpenCreateModal = (type, title) => {
+        setCreationModal({
+            isOpen: true,
+            type,
+            title
+        });
+        setCreationFormData({});
+        setCreationErrors({});
+    };
+
+    const handleCreateSubmit = async (e) => {
+        e.preventDefault();
+
+        // Basic validation
+        if (!creationFormData.name || !creationFormData.code) {
+            setCreationErrors({ submit: 'Name and Code are required' });
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            let url = '';
+            switch (creationModal.type) {
+                case 'group': url = '/api/items/groups'; break;
+                case 'category': url = '/api/items/categories'; break;
+                case 'uom': url = '/api/inventory/uoms'; break;
+                case 'warehouse': url = '/api/inventory/warehouses'; break;
+                case 'currency':
+                    // Just handle locally since it's a simple string field
+                    const newCurrency = { id: creationFormData.code, name: creationFormData.name || creationFormData.code, code: creationFormData.code };
+                    setCurrencies(prev => [...prev, newCurrency]);
+                    setFormData(prev => ({ ...prev, currency: creationFormData.code }));
+                    setCreationModal({ isOpen: false, type: null, title: '' });
+                    setCreationFormData({});
+                    setSubmitting(false);
+                    return;
+            }
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(creationFormData)
             });
-        };
-    }, [formData.images]);
 
+            const result = await response.json();
+
+            if (result.success) {
+                // Update local state and select the new item
+                const newItem = result.data;
+                switch (creationModal.type) {
+                    case 'group':
+                        setItemGroups(prev => [...prev, newItem]);
+                        setFormData(prev => ({ ...prev, itemGroupId: newItem.id }));
+                        break;
+                    case 'category':
+                        setCategories(prev => [...prev, newItem]);
+                        setFormData(prev => ({ ...prev, categoryId: newItem.id }));
+                        break;
+                    case 'uom':
+                        setUoms(prev => [...prev, newItem]);
+                        setFormData(prev => ({ ...prev, baseUomId: newItem.id }));
+                        break;
+                    case 'warehouse':
+                        setWarehouses(prev => [...prev, newItem]);
+                        setFormData(prev => ({ ...prev, settings_defaultWarehouseId: newItem.id }));
+                        break;
+                    case 'currency':
+                        // Currency is just a code/string for now
+                        const newCurrency = { id: newItem.code, name: newItem.name || newItem.code, code: newItem.code };
+                        setCurrencies(prev => [...prev, newCurrency]);
+                        setFormData(prev => ({ ...prev, currency: newItem.code }));
+                        break;
+                }
+                setCreationModal({ isOpen: false, type: null, title: '' });
+                setCreationFormData({});
+            } else {
+                setCreationErrors({ submit: result.error || 'Failed to create item' });
+            }
+        } catch (error) {
+            console.error('Error creating item:', error);
+            setCreationErrors({ submit: 'An error occurred' });
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const fetchItems = async () => {
+        try {
+            setLoadingData(true);
+            const queryParams = new URLSearchParams({
+                page: page.toString(),
+                limit: limit.toString(),
+                sort: 'createdAt',
+                order: 'desc'
+            });
+
+            if (searchTerm) queryParams.append('search', searchTerm);
+            if (filterGroup !== 'all') queryParams.append('groupId', filterGroup);
+            if (filterStatus !== 'all') queryParams.append('active', filterStatus === 'active' ? 'true' : 'false');
+
+            // Apply Dashboard Filters
+            if (activeFilter === 'ACTIVE') {
+                queryParams.set('active', 'true');
+            } else if (activeFilter === 'HAS_MIN_STOCK') {
+                queryParams.set('active', 'true');
+                queryParams.set('hasMinStock', 'true');
+            } else if (activeFilter === 'HAS_MAX_STOCK') {
+                queryParams.set('active', 'true');
+                queryParams.set('hasMaxStock', 'true');
+            }
+
+            const response = await fetch(`/api/items?${queryParams}`, {
+                headers: getAuthHeaders()
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                setItems(result.data);
+                if (result.meta?.pagination) {
+                    setTotalPages(result.meta.pagination.totalPages);
+                    setTotalRecords(result.meta.pagination.total);
+                }
+                // fetchStats(); // We call fetchStats independently in useEffect, avoiding double call if not needed
+            }
+        } catch (error) {
+            console.error('Error fetching items:', error);
+        } finally {
+            setLoadingData(false);
+        }
+    };
+
+    const fetchStats = async () => {
+        try {
+            const response = await fetch('/api/items/stats', {
+                headers: getAuthHeaders()
+            });
+            const result = await response.json();
+            if (result.success) {
+                setStats(result.data);
+            }
+        } catch (error) {
+            console.error('Error fetching stats:', error);
+        }
+    };
+
+    // Image Handlers
     const handleDrag = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -195,61 +380,6 @@ export default function ItemMasterPage() {
         });
     };
 
-    const fetchItems = async () => {
-        try {
-            setLoadingData(true);
-            const queryParams = new URLSearchParams({
-                page: page.toString(),
-                limit: limit.toString(),
-                sort: 'createdAt',
-                order: 'desc'
-            });
-
-            if (searchTerm) queryParams.append('search', searchTerm);
-            if (filterGroup !== 'all') queryParams.append('groupId', filterGroup);
-            if (filterStatus !== 'all') queryParams.append('active', filterStatus === 'active' ? 'true' : 'false');
-
-            // Apply Dashboard Filters
-            if (activeFilter === 'ACTIVE') {
-                queryParams.set('active', 'true');
-            } else if (activeFilter === 'HAS_MIN_STOCK') {
-                queryParams.set('active', 'true');
-                queryParams.set('hasMinStock', 'true');
-            } else if (activeFilter === 'HAS_MAX_STOCK') {
-                queryParams.set('active', 'true');
-                queryParams.set('hasMaxStock', 'true');
-            }
-
-            const response = await fetch(`/api/items?${queryParams}`);
-            const result = await response.json();
-
-            if (result.success) {
-                setItems(result.data);
-                if (result.meta?.pagination) {
-                    setTotalPages(result.meta.pagination.totalPages);
-                    setTotalRecords(result.meta.pagination.total);
-                }
-                fetchStats(); // Update global stats on search
-            }
-        } catch (error) {
-            console.error('Error fetching items:', error);
-        } finally {
-            setLoadingData(false);
-        }
-    };
-
-    const fetchStats = async () => {
-        try {
-            const response = await fetch('/api/items/stats');
-            const result = await response.json();
-            if (result.success) {
-                setStats(result.data);
-            }
-        } catch (error) {
-            console.error('Error fetching stats:', error);
-        }
-    };
-
     // Deprecated local calc, using API stats now
     const calculateStats = (itemsData, totalOverride) => {
         // Only update total from pagination if we are in 'ALL' mode or if we want to show filtered count
@@ -286,13 +416,13 @@ export default function ItemMasterPage() {
             maxStock: '',
             reorderPoint: '',
             settings_defaultWarehouseId: '',
-            standardCost: 0,
-            defaultSellingPrice: 0,
+            standardCost: '',
+            defaultSellingPrice: '',
             currency: 'USD',
-            taxRate: 0,
+            taxRate: '',
             tracking: 'none',
             expiryControl: false,
-            shelfLifeDays: 0,
+            shelfLifeDays: '',
             storageTemp: '',
             storageHumidity: '',
             isPurchaseItem: true,
@@ -306,7 +436,9 @@ export default function ItemMasterPage() {
 
     const fetchGroups = async () => {
         try {
-            const response = await fetch('/api/items/groups');
+            const response = await fetch('/api/items/groups', {
+                headers: getAuthHeaders()
+            });
             const result = await response.json();
             if (result.success) {
                 setItemGroups(result.data);
@@ -333,19 +465,19 @@ export default function ItemMasterPage() {
             tags: Array.isArray(item.tags) ? item.tags.join(', ') : (item.tags || ''),
 
             baseUomId: item.baseUomId || '',
-            minStock: item.minStock || 0,
-            maxStock: item.maxStock || 0,
-            reorderPoint: item.reorderPoint || 0,
+            minStock: item.minStock ?? '',
+            maxStock: item.maxStock ?? '',
+            reorderPoint: item.reorderPoint ?? '',
             settings_defaultWarehouseId: item.defaultWarehouseId || '',
 
-            standardCost: item.standardCost || 0,
-            defaultSellingPrice: item.defaultSellingPrice || 0,
+            standardCost: item.standardCost ?? '',
+            defaultSellingPrice: item.defaultSellingPrice ?? '',
             currency: item.currency || 'USD',
-            taxRate: item.taxRate || 0,
+            taxRate: item.taxRate ?? '',
 
             tracking: item.tracking || 'none',
             expiryControl: item.expiryControl || false,
-            shelfLifeDays: item.shelfLifeDays || 0,
+            shelfLifeDays: item.shelfLifeDays ?? '',
             storageTemp: item.storageTemp || '',
             storageHumidity: item.storageHumidity || '',
 
@@ -383,6 +515,7 @@ export default function ItemMasterPage() {
             const method = editingItem ? 'PUT' : 'POST';
 
             const cleanUUID = (val) => (val && val.trim() !== '' ? val : null);
+            const cleanNumber = (val) => (val === '' || val === null || val === undefined ? null : Number(val));
 
             const payload = {
                 ...formData,
@@ -395,13 +528,30 @@ export default function ItemMasterPage() {
                 purchaseUomId: cleanUUID(formData.purchaseUomId),
                 salesUomId: cleanUUID(formData.salesUomId),
                 tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(t => t) : [],
-                minStock: formData.minStock === '' ? null : formData.minStock,
-                maxStock: formData.maxStock === '' ? null : formData.maxStock,
+
+                // Nullable numerics (empty input -> null)
+                minStock: cleanNumber(formData.minStock),
+                maxStock: cleanNumber(formData.maxStock),
+                reorderPoint: cleanNumber(formData.reorderPoint),
+                reorderQty: cleanNumber(formData.reorderQty),
+                safetyStock: cleanNumber(formData.safetyStock),
+                leadTimeDays: cleanNumber(formData.leadTimeDays),
+                shelfLifeDays: cleanNumber(formData.shelfLifeDays),
+                warrantyMonths: cleanNumber(formData.warrantyMonths),
+                weight: cleanNumber(formData.weight),
+                length: cleanNumber(formData.length),
+                width: cleanNumber(formData.width),
+                height: cleanNumber(formData.height),
+
+                // Numerics (previously zero, now null allowed per request)
+                standardCost: cleanNumber(formData.standardCost),
+                defaultSellingPrice: cleanNumber(formData.defaultSellingPrice),
+                taxRate: cleanNumber(formData.taxRate),
             };
 
             const response = await fetch(url, {
                 method: method,
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(payload)
             });
 
@@ -425,7 +575,10 @@ export default function ItemMasterPage() {
         if (!confirm('Bạn có chắc chắn muốn xóa item này?')) return;
 
         try {
-            const response = await fetch(`/api/items/${id}`, { method: 'DELETE' });
+            const response = await fetch(`/api/items/${id}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
             if (response.ok) {
                 await fetchItems();
             } else {
@@ -599,10 +752,10 @@ export default function ItemMasterPage() {
                                                         <input type="checkbox" checked={item.isSalesItem} readOnly style={{ accentColor: 'var(--primary)' }} />
                                                     </td>
                                                     <td className="tableCell" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                                                        ${item.standardCost || 0}
+                                                        {item.standardCost !== null && item.standardCost !== undefined ? `$${item.standardCost}` : '-'}
                                                     </td>
                                                     <td className="tableCell" style={{ fontWeight: 600, color: 'var(--success)' }}>
-                                                        ${item.defaultSellingPrice || 0}
+                                                        {item.defaultSellingPrice !== null && item.defaultSellingPrice !== undefined ? `$${item.defaultSellingPrice}` : '-'}
                                                     </td>
                                                     <td className="tableCell">
                                                         <span className={`statusBadge ${item.isActive ? 'active' : 'inactive'}`}>
@@ -815,33 +968,25 @@ export default function ItemMasterPage() {
                             <>
                                 <div className="formGroup">
                                     <label htmlFor="itemGroupId">Group</label>
-                                    <select
-                                        id="itemGroupId"
-                                        className="formInput"
-                                        value={formData.itemGroupId}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, itemGroupId: e.target.value }))}
-                                        disabled={submitting}
-                                    >
-                                        <option value="">Select Group</option>
-                                        {itemGroups.map(group => (
-                                            <option key={group.id} value={group.id}>{group.name}</option>
-                                        ))}
-                                    </select>
+                                    <MultiSelect
+                                        options={itemGroups}
+                                        value={formData.itemGroupId ? [formData.itemGroupId] : []}
+                                        onChange={(val) => setFormData(prev => ({ ...prev, itemGroupId: val[0] || '' }))}
+                                        placeholder="Select Group"
+                                        singleSelect={true}
+                                        onAddNew={() => handleOpenCreateModal('group', 'Create New Item Group')}
+                                    />
                                 </div>
                                 <div className="formGroup">
                                     <label htmlFor="categoryId">Category</label>
-                                    <select
-                                        id="categoryId"
-                                        className="formInput"
-                                        value={formData.categoryId}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, categoryId: e.target.value }))}
-                                        disabled={submitting}
-                                    >
-                                        <option value="">Select Category</option>
-                                        {CATEGORIES.map(cat => (
-                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                        ))}
-                                    </select>
+                                    <MultiSelect
+                                        options={categories}
+                                        value={formData.categoryId ? [formData.categoryId] : []}
+                                        onChange={(val) => setFormData(prev => ({ ...prev, categoryId: val[0] || '' }))}
+                                        placeholder="Select Category"
+                                        singleSelect={true}
+                                        onAddNew={() => handleOpenCreateModal('category', 'Create New Category')}
+                                    />
                                 </div>
                                 <div className="formGroup">
                                     <label htmlFor="brand">Brand</label>
@@ -881,33 +1026,25 @@ export default function ItemMasterPage() {
                             <>
                                 <div className="formGroup">
                                     <label htmlFor="baseUomId">Base UOM</label>
-                                    <select
-                                        id="baseUomId"
-                                        className="formInput"
-                                        value={formData.baseUomId}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, baseUomId: e.target.value }))}
-                                        disabled={submitting}
-                                    >
-                                        <option value="">Select UOM</option>
-                                        {UOMS.map(uom => (
-                                            <option key={uom.id} value={uom.id}>{uom.name} ({uom.code})</option>
-                                        ))}
-                                    </select>
+                                    <MultiSelect
+                                        options={uoms}
+                                        value={formData.baseUomId ? [formData.baseUomId] : []}
+                                        onChange={(val) => setFormData(prev => ({ ...prev, baseUomId: val[0] || '' }))}
+                                        placeholder="Select UOM"
+                                        singleSelect={true}
+                                        onAddNew={() => handleOpenCreateModal('uom', 'Create New UOM')}
+                                    />
                                 </div>
                                 <div className="formGroup">
                                     <label htmlFor="defaultWarehouseId">Warehouse Assignment</label>
-                                    <select
-                                        id="defaultWarehouseId"
-                                        className="formInput"
-                                        value={formData.settings_defaultWarehouseId}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, settings_defaultWarehouseId: e.target.value }))}
-                                        disabled={submitting}
-                                    >
-                                        <option value="">Default Warehouse</option>
-                                        {WAREHOUSES.map(wh => (
-                                            <option key={wh.id} value={wh.id}>{wh.name}</option>
-                                        ))}
-                                    </select>
+                                    <MultiSelect
+                                        options={warehouses}
+                                        value={formData.settings_defaultWarehouseId ? [formData.settings_defaultWarehouseId] : []}
+                                        onChange={(val) => setFormData(prev => ({ ...prev, settings_defaultWarehouseId: val[0] || '' }))}
+                                        placeholder="Default Warehouse"
+                                        singleSelect={true}
+                                        onAddNew={() => handleOpenCreateModal('warehouse', 'Create New Warehouse')}
+                                    />
                                 </div>
                                 <div className="formGroup">
                                     <label htmlFor="minStock">Min Stock</label>
@@ -941,17 +1078,14 @@ export default function ItemMasterPage() {
                             <>
                                 <div className="formGroup">
                                     <label htmlFor="currency">Currency</label>
-                                    <select
-                                        id="currency"
-                                        className="formInput"
-                                        value={formData.currency}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, currency: e.target.value }))}
-                                        disabled={submitting}
-                                    >
-                                        {CURRENCIES.map(c => (
-                                            <option key={c} value={c}>{c}</option>
-                                        ))}
-                                    </select>
+                                    <MultiSelect
+                                        options={currencies}
+                                        value={formData.currency ? [formData.currency] : []}
+                                        onChange={(val) => setFormData(prev => ({ ...prev, currency: val[0] || '' }))}
+                                        placeholder="Select Currency"
+                                        singleSelect={true}
+                                        onAddNew={() => handleOpenCreateModal('currency', 'Add New Currency')}
+                                    />
                                 </div>
                                 <div className="formGroup">
                                     <label htmlFor="taxRate">Tax</label>
@@ -1226,7 +1360,70 @@ export default function ItemMasterPage() {
                         </div>
                     </div>
                 </form>
-            </Modal >
+            </Modal>
+
+            {/* Generic Creation Modal */}
+            <Modal
+                isOpen={creationModal.isOpen}
+                onClose={() => setCreationModal({ ...creationModal, isOpen: false })}
+                title={creationModal.title}
+                width="500px"
+                footer={
+                    <>
+                        <button
+                            type="button"
+                            className="btn secondary"
+                            onClick={() => setCreationModal({ ...creationModal, isOpen: false })}
+                            disabled={submitting}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            className="btn primary"
+                            onClick={handleCreateSubmit}
+                            disabled={submitting}
+                        >
+                            {submitting ? 'Creating...' : 'Create'}
+                        </button>
+                    </>
+                }
+            >
+                <form onSubmit={handleCreateSubmit} className="formGrid singleColumn">
+                    <div className="formGroup">
+                        <label>Code <span className="required">*</span></label>
+                        <input
+                            type="text"
+                            className="formInput"
+                            value={creationFormData.code || ''}
+                            onChange={(e) => setCreationFormData(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                            placeholder="Unique Code"
+                        />
+                    </div>
+                    <div className="formGroup">
+                        <label>Name <span className="required">*</span></label>
+                        <input
+                            type="text"
+                            className="formInput"
+                            value={creationFormData.name || ''}
+                            onChange={(e) => setCreationFormData(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="Name"
+                        />
+                    </div>
+                    <div className="formGroup fullWidth">
+                        <label>Description</label>
+                        <textarea
+                            className="formInput"
+                            value={creationFormData.description || ''}
+                            onChange={(e) => setCreationFormData(prev => ({ ...prev, description: e.target.value }))}
+                            rows={3}
+                        />
+                    </div>
+                    {creationErrors.submit && (
+                        <div className="errorMessage">{creationErrors.submit}</div>
+                    )}
+                </form>
+            </Modal>
         </>
     );
 }

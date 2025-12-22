@@ -43,6 +43,12 @@ export default function UsersPage() {
     const { trackEvent } = useEventTracking();
     const MODULE_NAME = 'USERS';
 
+    // Role Creation State
+    const [showRoleModal, setShowRoleModal] = useState(false);
+    const [roleData, setRoleData] = useState({ name: '', description: '' });
+    const [roleErrors, setRoleErrors] = useState({});
+    const [roleSubmitting, setRoleSubmitting] = useState(false);
+
     useEffect(() => {
         fetchUsers();
         fetchRoles();
@@ -266,6 +272,76 @@ export default function UsersPage() {
                 : [...prev.roleIds, roleId];
             return { ...prev, roleIds };
         });
+    };
+
+    const getAuthHeaders = () => {
+        const headers = { 'Content-Type': 'application/json' };
+        const userData = localStorage.getItem('user');
+        if (userData) {
+            try {
+                const user = JSON.parse(userData);
+                if (user.ten_id) headers['x-tenant-id'] = user.ten_id;
+                if (user.stg_id) headers['x-stage-id'] = user.stg_id;
+            } catch (e) { console.error(e); }
+        }
+        return headers;
+    };
+
+    const handleCreateRole = () => {
+        setRoleData({ name: '', description: '' });
+        setRoleErrors({});
+        setShowRoleModal(true);
+    };
+
+    const handleSaveNewRole = async (e) => {
+        e.preventDefault();
+
+        const errors = {};
+        if (!roleData.name || roleData.name.trim() === '') {
+            errors.name = 'Role name is required';
+        }
+        setRoleErrors(errors);
+
+        if (Object.keys(errors).length > 0) return;
+
+        setRoleSubmitting(true);
+        try {
+            const response = await fetch('/api/roles', {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(roleData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Refresh roles
+                await fetchRoles();
+
+                // Add new role to selected roles
+                setFormData(prev => ({
+                    ...prev,
+                    roleIds: [...prev.roleIds, result.data.id]
+                }));
+
+                setShowRoleModal(false);
+
+                trackEvent({
+                    action: ACTION_TYPES.CREATE,
+                    module: 'ROLES', // Cross-module action
+                    object_id: result.data.id,
+                    object_type: 'Role',
+                    details: `Created role from Users popup: ${roleData.name}`
+                });
+            } else {
+                setRoleErrors({ submit: result.error || 'Failed to save role' });
+            }
+        } catch (error) {
+            console.error('Error saving role:', error);
+            setRoleErrors({ submit: 'An error occurred while saving the role' });
+        } finally {
+            setRoleSubmitting(false);
+        }
     };
 
     const filterData = () => {
@@ -746,6 +822,7 @@ export default function UsersPage() {
                             onChange={(newRoleIds) => setFormData(prev => ({ ...prev, roleIds: newRoleIds }))}
                             placeholder="Select roles..."
                             disabled={submitting}
+                            onAddNew={handleCreateRole}
                         />
                     </div>
 
@@ -764,6 +841,71 @@ export default function UsersPage() {
                                 {formData.isActive ? 'Active' : 'Inactive'}
                             </span>
                         </div>
+                    </div>
+                </form>
+            </Modal>
+            {/* Add Role Modal */}
+            <Modal
+                isOpen={showRoleModal}
+                onClose={() => setShowRoleModal(false)}
+                title="Add New Role"
+                maxWidth="500px"
+                footer={
+                    <>
+                        <button
+                            type="button"
+                            className="btn secondary"
+                            onClick={() => setShowRoleModal(false)}
+                            disabled={roleSubmitting}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="btn primary"
+                            disabled={roleSubmitting}
+                            onClick={handleSaveNewRole}
+                        >
+                            {roleSubmitting ? 'Saving...' : 'Create Role'}
+                        </button>
+                    </>
+                }
+            >
+                <form onSubmit={handleSaveNewRole}>
+                    {roleErrors.submit && (
+                        <div className="errorMessage">{roleErrors.submit}</div>
+                    )}
+
+                    <div className="formGroup">
+                        <label htmlFor="newRoleName">
+                            Role Name <span className="required">*</span>
+                        </label>
+                        <input
+                            id="newRoleName"
+                            type="text"
+                            className={`formInput ${roleErrors.name ? 'error' : ''}`}
+                            value={roleData.name}
+                            onChange={(e) => setRoleData(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="Enter role name"
+                            disabled={roleSubmitting}
+                            autoFocus
+                        />
+                        {roleErrors.name && (
+                            <span className="fieldError">{roleErrors.name}</span>
+                        )}
+                    </div>
+
+                    <div className="formGroup">
+                        <label htmlFor="newRoleDescription">Description</label>
+                        <textarea
+                            id="newRoleDescription"
+                            className="formInput"
+                            value={roleData.description}
+                            onChange={(e) => setRoleData(prev => ({ ...prev, description: e.target.value }))}
+                            placeholder="Enter role description (optional)"
+                            rows="4"
+                            disabled={roleSubmitting}
+                        />
                     </div>
                 </form>
             </Modal>

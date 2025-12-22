@@ -4,7 +4,7 @@
  */
 
 import { BaseRepository } from './BaseRepository.js';
-import { items, itemGroups, itemCategories, uomMaster } from '@/db/schema/inventory';
+import { items, itemGroups, itemCategories, uomMaster, warehouses } from '@/db/schema/inventory';
 import { eq, and, sql, or, like, ilike } from 'drizzle-orm';
 import { DatabaseError } from '@/lib/errors.js';
 
@@ -387,6 +387,50 @@ export class ItemRepository extends BaseRepository {
     }
 
     /**
+     * Get all item categories
+     */
+    async getItemCategories(tenantContext) {
+        try {
+            const { ten_id, stg_id } = tenantContext;
+
+            const results = await this.db
+                .select()
+                .from(itemCategories)
+                .where(and(
+                    eq(itemCategories.tenId, ten_id),
+                    eq(itemCategories.stgId, stg_id)
+                ))
+                .orderBy(itemCategories.name);
+
+            return results;
+        } catch (error) {
+            throw new DatabaseError('Failed to get item categories', error);
+        }
+    }
+
+    /**
+     * Get all warehouses
+     */
+    async getWarehouses(tenantContext) {
+        try {
+            const { ten_id, stg_id } = tenantContext;
+
+            const results = await this.db
+                .select()
+                .from(warehouses)
+                .where(and(
+                    eq(warehouses.tenId, ten_id),
+                    eq(warehouses.stgId, stg_id)
+                ))
+                .orderBy(warehouses.name);
+
+            return results;
+        } catch (error) {
+            throw new DatabaseError('Failed to get warehouses', error);
+        }
+    }
+
+    /**
      * Transform flat relational row to nested object
      */
     transformRelationalRow(row) {
@@ -419,6 +463,57 @@ export class ItemRepository extends BaseRepository {
 
         return item;
     }
+
+    /**
+     * Create Item Group
+     */
+    async createItemGroup(data, tenantContext) {
+        try {
+            const { ten_id, stg_id } = tenantContext;
+            const [newGroup] = await this.db.insert(itemGroups).values({
+                ...data,
+                tenId: ten_id,
+                stgId: stg_id
+            }).returning();
+            return newGroup;
+        } catch (error) {
+            throw new DatabaseError('Failed to create item group', error);
+        }
+    }
+
+    /**
+     * Create Item Category
+     */
+    async createItemCategory(data, tenantContext) {
+        try {
+            const { ten_id, stg_id } = tenantContext;
+            const [newCategory] = await this.db.insert(itemCategories).values({
+                ...data,
+                tenId: ten_id,
+                stgId: stg_id
+            }).returning();
+            return newCategory;
+        } catch (error) {
+            throw new DatabaseError('Failed to create item category', error);
+        }
+    }
+
+    /**
+     * Create Warehouse
+     */
+    async createWarehouse(data, tenantContext) {
+        try {
+            const { ten_id, stg_id } = tenantContext;
+            const [newWarehouse] = await this.db.insert(warehouses).values({
+                ...data,
+                tenId: ten_id,
+                stgId: stg_id
+            }).returning();
+            return newWarehouse;
+        } catch (error) {
+            throw new DatabaseError('Failed to create warehouse', error);
+        }
+    }
 }
 
 // Export singleton instance
@@ -430,5 +525,3 @@ export function getItemRepository() {
     }
     return itemRepositoryInstance;
 }
-
-export default ItemRepository;

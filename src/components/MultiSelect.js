@@ -8,7 +8,9 @@ export default function MultiSelect({
     value = [],
     onChange,
     placeholder = "Select...",
-    disabled = false
+    disabled = false,
+    onAddNew,
+    singleSelect = false
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -44,10 +46,15 @@ export default function MultiSelect({
     };
 
     const handleSelect = (optionId) => {
-        const newValue = value.includes(optionId)
-            ? value.filter(id => id !== optionId)
-            : [...value, optionId];
-        onChange(newValue);
+        if (singleSelect) {
+            onChange([optionId]);
+            setIsOpen(false);
+        } else {
+            const newValue = value.includes(optionId)
+                ? value.filter(id => id !== optionId)
+                : [...value, optionId];
+            onChange(newValue);
+        }
     };
 
     const handleRemove = (e, optionId) => {
@@ -59,24 +66,32 @@ export default function MultiSelect({
     const selectedOptions = options.filter(opt => value.includes(opt.id));
 
     return (
-        <div className="multiSelectContainer" ref={containerRef}>
-            <div className="multiSelectTrigger" onClick={handleToggle}>
-                {selectedOptions.map(option => (
-                    <span key={option.id} className="selectedTag">
-                        {option.name}
-                        <span
-                            className="removeTag"
-                            onClick={(e) => handleRemove(e, option.id)}
-                        >
-                            ×
+        <div className="msContainer" ref={containerRef}>
+            <div className="msTrigger" onClick={handleToggle}>
+                {selectedOptions.length > 0 ? (
+                    singleSelect ? (
+                        <span className="msSingleSelectedText">
+                            {selectedOptions[0].name}
                         </span>
-                    </span>
-                ))}
+                    ) : (
+                        selectedOptions.map(option => (
+                            <span key={option.id} className="msSelectedTag">
+                                {option.name}
+                                <span
+                                    className="msRemoveTag"
+                                    onClick={(e) => handleRemove(e, option.id)}
+                                >
+                                    ×
+                                </span>
+                            </span>
+                        ))
+                    )
+                ) : null}
 
                 <input
                     ref={inputRef}
                     type="text"
-                    className="searchInput"
+                    className="msSearchInput"
                     placeholder={selectedOptions.length === 0 ? placeholder : ""}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -85,26 +100,41 @@ export default function MultiSelect({
                 />
             </div>
 
-            <div className={`dropdownMenu ${isOpen ? 'open' : ''}`}>
+            <div className={`msDropdownMenu ${isOpen ? 'open' : ''}`}>
                 {filteredOptions.length > 0 ? (
                     filteredOptions.map(option => {
                         const isSelected = value.includes(option.id);
                         return (
                             <div
                                 key={option.id}
-                                className={`dropdownItem ${isSelected ? 'selected' : ''}`}
+                                className={`msDropdownItem ${isSelected ? 'selected' : ''}`}
                                 onClick={() => handleSelect(option.id)}
                             >
-                                <div className="checkbox">
-                                    <span className="checkIcon">✔</span>
-                                </div>
+                                {!singleSelect && (
+                                    <div className="msCheckbox">
+                                        <span className="msCheckIcon">✔</span>
+                                    </div>
+                                )}
                                 {option.name}
                             </div>
                         );
                     })
                 ) : (
-                    <div className="noOptions">
+                    <div className="msNoOptions">
                         No options found
+                    </div>
+                )}
+
+                {onAddNew && (
+                    <div
+                        className="msAddNewOption"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onAddNew();
+                            setIsOpen(false);
+                        }}
+                    >
+                        + Create "{searchTerm || 'New'}"
                     </div>
                 )}
             </div>

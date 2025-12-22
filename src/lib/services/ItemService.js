@@ -126,6 +126,61 @@ export class ItemService extends BaseService {
     }
 
     /**
+     * Get item categories
+     */
+    async getItemCategories(tenantContext) {
+        try {
+            return await this.itemRepository.getItemCategories(tenantContext);
+        } catch (error) {
+            this.log('error', 'Failed to get item categories', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get UOMs
+     */
+    async getUoms(tenantContext) {
+        try {
+            return await this.uomRepository.findAll({}, tenantContext);
+        } catch (error) {
+            this.log('error', 'Failed to get UOMs', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get Warehouses
+     */
+    async getWarehouses(tenantContext) {
+        try {
+            return await this.itemRepository.getWarehouses(tenantContext);
+        } catch (error) {
+            this.log('error', 'Failed to get warehouses', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Create item group
+     */
+    async createItemGroup(groupData, tenantContext) {
+        try {
+            // Validation
+            if (!groupData.name || !groupData.code) {
+                throw new ValidationError('Name and Code are required');
+            }
+
+            // Check existence logic could go here or in repository
+
+            return await this.itemRepository.createItemGroup(groupData, tenantContext);
+        } catch (error) {
+            this.log('error', 'Failed to create item group', error);
+            throw error;
+        }
+    }
+
+    /**
      * Update item
      */
     async updateItem(id, itemData, tenantContext) {
@@ -336,6 +391,51 @@ export class ItemService extends BaseService {
     }
 
     /**
+     * Create item category
+     */
+    async createItemCategory(categoryData, tenantContext) {
+        try {
+            if (!categoryData.name || !categoryData.code) {
+                throw new ValidationError('Name and Code are required');
+            }
+            return await this.itemRepository.createItemCategory(categoryData, tenantContext);
+        } catch (error) {
+            this.log('error', 'Failed to create item category', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Create UOM
+     */
+    async createUom(uomData, tenantContext) {
+        try {
+            if (!uomData.name || !uomData.code) {
+                throw new ValidationError('Name and Code are required');
+            }
+            return await this.uomRepository.create(uomData, tenantContext);
+        } catch (error) {
+            this.log('error', 'Failed to create UOM', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Create Warehouse
+     */
+    async createWarehouse(warehouseData, tenantContext) {
+        try {
+            if (!warehouseData.name || !warehouseData.code) {
+                throw new ValidationError('Name and Code are required');
+            }
+            return await this.itemRepository.createWarehouse(warehouseData, tenantContext);
+        } catch (error) {
+            this.log('error', 'Failed to create warehouse', error);
+            throw error;
+        }
+    }
+
+    /**
      * Get item statistics
      */
     async getItemStats(tenantContext) {
@@ -346,6 +446,7 @@ export class ItemService extends BaseService {
             throw error;
         }
     }
+
 }
 
 // Export singleton instance
