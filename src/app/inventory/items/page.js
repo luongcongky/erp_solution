@@ -69,6 +69,7 @@ export default function ItemMasterPage() {
         // Identification
         sku: '',
         name: '',
+        itemType: 'finished', // Default to Finished Goods
         shortName: '',
         description: '',
         barcode: '',
@@ -402,6 +403,7 @@ export default function ItemMasterPage() {
         setFormData({
             sku: '',
             name: '',
+            itemType: 'finished',
             shortName: '',
             description: '',
             barcode: '',
@@ -454,6 +456,7 @@ export default function ItemMasterPage() {
         setFormData({
             sku: item.sku,
             name: item.name,
+            itemType: item.itemType || 'finished',
             shortName: item.shortName || '',
             description: item.description || '',
             barcode: item.barcode || '', // Assuming barcode is joined or first one
@@ -910,6 +913,24 @@ export default function ItemMasterPage() {
                                         disabled={submitting || editingItem}
                                     />
                                     {formErrors.sku && <span className="fieldError">{formErrors.sku}</span>}
+                                </div>
+                                <div className="formGroup">
+                                    <label htmlFor="itemType">Item Type <span className="required">*</span></label>
+                                    <select
+                                        id="itemType"
+                                        className="formInput"
+                                        value={formData.itemType}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, itemType: e.target.value }))}
+                                        disabled={submitting}
+                                    >
+                                        <option value="raw_material">Raw Material</option>
+                                        <option value="semi_finished">Semi Finished</option>
+                                        <option value="finished">Finished Goods</option>
+                                        <option value="packaging">Packaging</option>
+                                        <option value="consumables">Consumables</option>
+                                        <option value="asset">Asset</option>
+                                        <option value="service">Service</option>
+                                    </select>
                                 </div>
                                 <div className="formGroup fullWidth">
                                     <label htmlFor="name">Item Name <span className="required">*</span></label>

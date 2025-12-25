@@ -5,15 +5,16 @@ import { relations } from 'drizzle-orm';
 export const inventorySchema = pgSchema('inventory');
 
 // Enums
-export const itemTypeEnum = pgEnum('item_type', ['raw_material', 'semi_finished', 'finished', 'service', 'asset']);
+export const itemTypeEnum = pgEnum('item_type', ['raw_material', 'semi_finished', 'finished', 'service', 'asset', 'packaging', 'consumables']);
 export const trackingEnum = pgEnum('tracking', ['none', 'batch', 'serial']);
 export const movementTypeEnum = pgEnum('movement_type', ['in', 'out', 'transfer', 'adjustment']);
-export const abcClassificationEnum = pgEnum('abc_classification', ['A', 'B', 'C']);
+
 export const costingMethodEnum = pgEnum('costing_method', ['FIFO', 'LIFO', 'Average', 'Standard']);
 export const barcodeTypeEnum = pgEnum('barcode_type', ['EAN13', 'UPC', 'CODE128', 'QR', 'Custom']);
 export const uomTypeEnum = pgEnum('uom_type', ['Quantity', 'Weight', 'Volume', 'Length', 'Area', 'Time']);
 export const imageTypeEnum = pgEnum('image_type', ['Product', 'Technical', 'Certificate', 'Other']);
 export const documentTypeEnum = pgEnum('document_type', ['Datasheet', 'MSDS', 'Certificate', 'Drawing', 'Manual', 'Other']);
+export const warehouseTypeEnum = pgEnum('warehouse_type', ['RM', 'FG', 'WIP', 'QUARANTINE']);
 
 // ============================================
 // MASTER DATA TABLES
@@ -84,7 +85,11 @@ export const warehouses = inventorySchema.table('warehouses', {
     id: uuid('id').primaryKey().defaultRandom(),
     code: varchar('code', { length: 50 }).notNull().unique(),
     name: varchar('name', { length: 200 }).notNull(),
+    warehouseType: warehouseTypeEnum('warehouse_type').default('FG'),
     address: jsonb('address'),
+    allowNegativeStock: boolean('allow_negative_stock').default(false),
+    defaultReceiptLocationId: uuid('default_receipt_location_id'),
+    defaultIssueLocationId: uuid('default_issue_location_id'),
     isActive: boolean('is_active').default(true),
     tenId: varchar('ten_id', { length: 20 }).notNull(),
     stgId: varchar('stg_id', { length: 20 }).default('DEV'),
@@ -137,7 +142,7 @@ export const items = inventorySchema.table('items', {
     reorderPoint: decimal('reorder_point', { precision: 18, scale: 4 }),
     reorderQty: decimal('reorder_qty', { precision: 18, scale: 4 }),
     safetyStock: decimal('safety_stock', { precision: 18, scale: 4 }),
-    abcClassification: abcClassificationEnum('abc_classification'),
+
 
     // Quality Control
     requiresQc: boolean('requires_qc').default(false),
@@ -429,6 +434,47 @@ export const inventoryCountLines = inventorySchema.table('inventory_count_lines'
 });
 
 // ============================================
+// INVENTORY SETUP TABLE
+// ============================================
+
+export const inventorySetup = inventorySchema.table('inventory_setup', {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // References
+    itemId: uuid('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+    warehouseId: uuid('warehouse_id').notNull().references(() => warehouses.id, { onDelete: 'cascade' }),
+
+    // Tracking
+    tracking: trackingEnum('tracking').default('none'),
+
+    // Reorder Settings
+    reorderPoint: decimal('reorder_point', { precision: 18, scale: 4 }),
+    reorderQty: decimal('reorder_qty', { precision: 18, scale: 4 }),
+    minStock: decimal('min_stock', { precision: 18, scale: 4 }),
+    maxStock: decimal('max_stock', { precision: 18, scale: 4 }),
+    safetyStock: decimal('safety_stock', { precision: 18, scale: 4 }),
+
+    // Valuation
+    valuationMethod: costingMethodEnum('valuation_method').default('FIFO'),
+
+    // Stock Control
+    isStocked: boolean('is_stocked').default(true),
+    allowNegativeStock: boolean('allow_negative_stock').default(false),
+
+    // Status
+    isActive: boolean('is_active').default(true),
+
+    // Notes
+    notes: text('notes'),
+
+    // Multi-tenant
+    tenId: varchar('ten_id', { length: 20 }).notNull(),
+    stgId: varchar('stg_id', { length: 20 }).default('DEV'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ============================================
 // TYPE EXPORTS
 // ============================================
 
@@ -494,3 +540,7 @@ export type NewInventoryCount = typeof inventoryCount.$inferInsert;
 
 export type InventoryCountLine = typeof inventoryCountLines.$inferSelect;
 export type NewInventoryCountLine = typeof inventoryCountLines.$inferInsert;
+
+export type InventorySetup = typeof inventorySetup.$inferSelect;
+export type NewInventorySetup = typeof inventorySetup.$inferInsert;
+

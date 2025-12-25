@@ -17,6 +17,10 @@
   /* Dark Slate Background */
   --surface: #1E293B;
   /* Slate 800 Surface */
+  --surface-light: #334155;
+  /* Slate 700 - Lighter surface for inputs and hover states */
+  --surface-secondary: #475569;
+  /* Slate 600 - Secondary surface */
   --surface-header: #1E293B;
   /* Same as surface for consistency */
   --surface-hover: #1A2238;
@@ -190,13 +194,103 @@ h6 {
 
 .btn-outline {
   background: transparent;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-light);
   color: var(--text-primary);
 }
 
 .btn-outline:hover {
   background: var(--surface-light);
-  border-color: var(--border-light);
+  border-color: var(--text-secondary);
+}
+
+.btn-success {
+  background: var(--success);
+  color: white;
+}
+
+.btn-success:hover {
+  filter: brightness(110%);
+}
+
+.btn-warning {
+  background: var(--warning);
+  color: white;
+}
+
+.btn-warning:hover {
+  filter: brightness(110%);
+}
+
+.btn-error {
+  background: var(--error);
+  color: white;
+}
+
+.btn-error:hover {
+  filter: brightness(110%);
+}
+
+.btn-info {
+  background: var(--info);
+  color: white;
+}
+
+.btn-info:hover {
+  filter: brightness(110%);
+}
+
+.btn-sm {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.btn-xs {
+  padding: 0.125rem 0.5rem;
+  font-size: 0.7rem;
+}
+
+/* Outline Variants */
+.btn-outline-primary {
+  background: transparent;
+  border: 1px solid var(--primary-light);
+  color: var(--primary-light);
+}
+
+.btn-outline-primary:hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: var(--primary);
+}
+
+.btn-outline-success {
+  background: transparent;
+  border: 1px solid var(--success);
+  color: var(--success);
+}
+
+.btn-outline-success:hover {
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.btn-outline-warning {
+  background: transparent;
+  border: 1px solid var(--warning);
+  color: var(--text-primary);
+}
+
+.btn-outline-warning:hover {
+  background: transparent;
+  border-color: var(--warning);
+  filter: brightness(120%);
+}
+
+.btn-outline-error {
+  background: transparent;
+  border: 1px solid var(--error);
+  color: var(--error);
+}
+
+.btn-outline-error:hover {
+  background: rgba(239, 68, 68, 0.1);
 }
 
 /* Input Component */

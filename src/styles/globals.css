@@ -63,6 +63,88 @@ a:hover {
   box-shadow: 0 0 25px var(--primary-glow);
 }
 
+.btn-outline {
+  background: transparent;
+  border: 1px solid #334155;
+  /* Default border */
+  color: #E2E8F0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-outline:hover {
+  border-color: var(--primary);
+  background: rgba(37, 99, 235, 0.1);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(37, 99, 235, 0.3);
+}
+
+/* Specific overwrite for Add Items button to match Primary feel but outlined */
+.btn-outline.primary-outline {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.btn-outline.primary-outline:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-secondary {
+  background: #1E293B;
+  border: 1px solid #334155;
+  color: #E2E8F0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-secondary:hover {
+  background: #334155;
+  border-color: #475569;
+  color: #fff;
+}
+
+.btn-success {
+  background: #059669;
+  /* Solid green for better visibility */
+  color: white;
+  border: 1px solid #047857;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-success:hover {
+  background: #047857;
+  box-shadow: 0 0 10px rgba(5, 150, 105, 0.4);
+}
+
+.btn-error {
+  background: #DC2626;
+  /* Solid red for destructive actions */
+  color: white;
+  border: 1px solid #B91C1C;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-error:hover {
+  background: #B91C1C;
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.4);
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+  border-radius: 6px;
+  height: 32px;
+  /* Fixed height for alignment */
+}
+
 .glass-panel {
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));

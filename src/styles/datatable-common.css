@@ -7,9 +7,9 @@
 .tableContainer {
     padding: 0;
     overflow: hidden;
-    border: 1px solid #1E293B;
+    border: 1px solid var(--border);
     border-radius: 12px;
-    background: #0F172A;
+    background: var(--background);
     box-shadow: none;
 }
 
@@ -19,8 +19,8 @@
 }
 
 .tableHeader {
-    background: #1E293B;
-    border-bottom: 1px solid #2C3A4E;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-light);
 }
 
 .tableHeaderCell {
@@ -28,7 +28,7 @@
     text-align: left;
     font-size: 0.8125rem;
     font-weight: 600;
-    color: #E2E8F0;
+    color: var(--text-primary);
     cursor: pointer;
     user-select: none;
 }
@@ -48,16 +48,17 @@
    ======================================== */
 
 .tableRow {
-    border-bottom: 1px solid #1F2937;
+    border-bottom: 1px solid var(--border);
     transition: background 0.15s ease;
 }
 
 .tableRow.even {
-    background: #0F172A;
+    background: var(--background);
 }
 
 .tableRow.odd {
-    background: #111C2E;
+    background: var(--surface-bg-alt, #111C2E);
+    /* Fallback or define new var */
 }
 
 .tableRow.selected {
@@ -65,17 +66,17 @@
 }
 
 .tableRow:hover {
-    background: #1A2238 !important;
+    background: var(--surface-hover) !important;
 }
 
 .tableCell {
     padding: 10px 14px;
     font-size: 0.8125rem;
-    color: #E2E8F0;
+    color: var(--text-primary);
 }
 
 .tableCell.secondary {
-    color: #94A3B8;
+    color: var(--text-secondary);
 }
 
 /* ========================================
@@ -91,24 +92,25 @@
     font-size: 0.75rem;
     padding: 6px 12px;
     background: transparent;
-    border: 1px solid #334155;
-    color: #CBD5E1;
+    border: 1px solid var(--border-light);
+    color: var(--text-secondary);
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .editButton:hover {
-    background: #1E293B;
-    border-color: #475569;
+    background: var(--surface);
+    border-color: var(--body-text);
+    color: var(--text-primary);
 }
 
 .deleteButton {
     font-size: 0.75rem;
     padding: 6px 12px;
     background: transparent;
-    border: 1px solid #EF4444;
-    color: #EF4444;
+    border: 1px solid var(--error);
+    color: var(--error);
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;
@@ -122,8 +124,8 @@
     font-size: 0.75rem;
     padding: 6px 12px;
     background: transparent;
-    border: 1px solid #F59E0B;
-    color: #F59E0B;
+    border: 1px solid var(--warning);
+    color: var(--warning);
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;

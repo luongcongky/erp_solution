@@ -195,3 +195,4 @@ export type NewItemMechanical = typeof itemMechanical.$inferInsert;
 
 export type ItemTextile = typeof itemTextile.$inferSelect;
 export type NewItemTextile = typeof itemTextile.$inferInsert;
+

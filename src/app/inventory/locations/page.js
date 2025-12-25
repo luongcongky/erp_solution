@@ -1,55 +1,77 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { InventoryIcon } from '@/components/icons';
+import AddWarehouseLocationModal from '@/components/AddWarehouseLocationModal';
 
 export default function LocationsPage() {
-    const [expandedNodes, setExpandedNodes] = useState(['WH-MAIN', 'ZONE-A', 'ZONE-B']);
+    const [expandedNodes, setExpandedNodes] = useState([]);
+    const [warehouses, setWarehouses] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [showModal, setShowModal] = useState(false);
 
-    const locationTree = [
-        {
-            id: 'WH-MAIN',
-            name: 'Main Central Warehouse',
-            type: 'warehouse',
-            capacity: '10,000 m³',
-            utilization: 75,
-            children: [
-                {
-                    id: 'ZONE-A',
-                    name: 'Raw Materials Zone',
-                    type: 'zone',
-                    capacity: '5,000 m³',
-                    utilization: 85,
-                    children: [
-                        { id: 'RACK-A1', name: 'Rack A1 - Steel', type: 'rack', capacity: '500 m³', utilization: 90, items: 45 },
-                        { id: 'RACK-A2', name: 'Rack A2 - Plastics', type: 'rack', capacity: '500 m³', utilization: 65, items: 32 },
-                        { id: 'RACK-A3', name: 'Rack A3 - Metals', type: 'rack', capacity: '500 m³', utilization: 40, items: 28 },
-                    ]
-                },
-                {
-                    id: 'ZONE-B',
-                    name: 'Finished Goods Zone',
-                    type: 'zone',
-                    capacity: '3,000 m³',
-                    utilization: 60,
-                    children: [
-                        { id: 'RACK-B1', name: 'Rack B1 - Electronics', type: 'rack', capacity: '400 m³', utilization: 70, items: 58 },
-                        { id: 'RACK-B2', name: 'Rack B2 - Widgets', type: 'rack', capacity: '400 m³', utilization: 55, items: 42 },
-                    ]
-                },
-                {
-                    id: 'ZONE-C',
-                    name: 'Quarantine Zone',
-                    type: 'zone',
-                    capacity: '1,000 m³',
-                    utilization: 25,
-                    children: [
-                        { id: 'RACK-C1', name: 'Rack C1 - QC Hold', type: 'rack', capacity: '200 m³', utilization: 30, items: 12 },
-                    ]
-                }
-            ]
+    const getAuthHeaders = () => {
+        try {
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                const tenId = user.ten_id || user.company?.ten_id || '1000';
+                const stgId = user.stg_id || user.company?.stg_id || 'DEV';
+                return {
+                    'x-tenant-id': tenId,
+                    'x-stage-id': stgId,
+                    'Content-Type': 'application/json'
+                };
+            }
+        } catch (e) {
+            console.error('Error parsing user from localStorage', e);
         }
-    ];
+        return {
+            'x-tenant-id': '1000',
+            'x-stage-id': 'DEV',
+            'Content-Type': 'application/json'
+        };
+    };
+
+    useEffect(() => {
+        fetchWarehouses();
+    }, []);
+
+    const fetchWarehouses = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('/api/warehouses', {
+                headers: getAuthHeaders()
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                // Fetch locations for each warehouse
+                const warehousesWithLocations = await Promise.all(
+                    result.data.map(async (warehouse) => {
+                        const locResponse = await fetch(`/api/warehouses/${warehouse.id}/locations`, {
+                            headers: getAuthHeaders()
+                        });
+                        const locResult = await locResponse.json();
+
+                        return {
+                            ...warehouse,
+                            locations: locResult.success ? locResult.data : []
+                        };
+                    })
+                );
+                setWarehouses(warehousesWithLocations);
+            }
+        } catch (error) {
+            console.error('Error fetching warehouses:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleModalSuccess = () => {
+        fetchWarehouses(); // Refresh data after creating new warehouse/location
+    };
 
     const toggleNode = (nodeId) => {
         setExpandedNodes(prev =>
@@ -143,7 +165,7 @@ export default function LocationsPage() {
                         Cấu trúc phân cấp kho hàng và theo dõi công suất
                     </p>
                 </div>
-                <button className="btn btn-primary">
+                <button className="btn btn-primary" onClick={() => setShowModal(true)}>
                     <InventoryIcon size={20} />
                     Thêm vị trí mới
                 </button>
@@ -156,31 +178,31 @@ export default function LocationsPage() {
                         Tổng kho
                     </div>
                     <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                        3
+                        {warehouses.length}
                     </div>
                 </div>
                 <div className="card">
                     <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: 'var(--spacing-sm)' }}>
-                        Tổng zones
+                        Kho FG
                     </div>
                     <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--primary)' }}>
-                        8
+                        {warehouses.filter(w => w.warehouseType === 'FG').length}
                     </div>
                 </div>
                 <div className="card">
                     <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: 'var(--spacing-sm)' }}>
-                        Tổng racks
+                        Kho RM
                     </div>
                     <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--info)' }}>
-                        42
+                        {warehouses.filter(w => w.warehouseType === 'RM').length}
                     </div>
                 </div>
                 <div className="card">
                     <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: 'var(--spacing-sm)' }}>
-                        Công suất TB
+                        Tổng vị trí
                     </div>
                     <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--warning)' }}>
-                        68%
+                        {warehouses.reduce((sum, w) => sum + w.locations.length, 0)}
                     </div>
                 </div>
             </div>
@@ -198,10 +220,10 @@ export default function LocationsPage() {
                             const collectIds = (nodes) => {
                                 nodes.forEach(node => {
                                     allIds.push(node.id);
-                                    if (node.children) collectIds(node.children);
+                                    if (node.children && node.children.length > 0) collectIds(node.children);
                                 });
                             };
-                            collectIds(locationTree);
+                            collectIds(transformWarehousesToTree(warehouses));
                             setExpandedNodes(allIds);
                         }}>
                             Mở rộng tất cả
@@ -209,7 +231,17 @@ export default function LocationsPage() {
                     </div>
                 </div>
                 <div className="card-body">
-                    {renderTree(locationTree)}
+                    {loading ? (
+                        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                            Đang tải dữ liệu...
+                        </div>
+                    ) : warehouses.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                            Chưa có kho nào. Nhấn "Thêm vị trí mới" để tạo kho đầu tiên.
+                        </div>
+                    ) : (
+                        renderTree(transformWarehousesToTree(warehouses))
+                    )}
                 </div>
             </div>
 
@@ -271,6 +303,53 @@ export default function LocationsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Add Warehouse/Location Modal */}
+            <AddWarehouseLocationModal
+                isOpen={showModal}
+                onClose={() => setShowModal(false)}
+                onSuccess={handleModalSuccess}
+                warehouses={warehouses}
+            />
         </div>
     );
+}
+
+// Helper function to transform warehouses to tree structure
+function transformWarehousesToTree(warehouses) {
+    return warehouses.map(warehouse => {
+        // Build location tree from flat locations array
+        const locationMap = {};
+        const rootLocations = [];
+
+        // First pass: create map of all locations
+        warehouse.locations.forEach(loc => {
+            locationMap[loc.id] = {
+                id: loc.id,
+                name: loc.name,
+                code: loc.code,
+                type: 'location',
+                children: []
+            };
+        });
+
+        // Second pass: build hierarchy
+        warehouse.locations.forEach(loc => {
+            if (loc.parentLocationId && locationMap[loc.parentLocationId]) {
+                locationMap[loc.parentLocationId].children.push(locationMap[loc.id]);
+            } else {
+                rootLocations.push(locationMap[loc.id]);
+            }
+        });
+
+        return {
+            id: warehouse.id,
+            name: `${warehouse.name} (${warehouse.warehouseType})`,
+            code: warehouse.code,
+            type: 'warehouse',
+            warehouseType: warehouse.warehouseType,
+            allowNegativeStock: warehouse.allowNegativeStock,
+            children: rootLocations
+        };
+    });
 }

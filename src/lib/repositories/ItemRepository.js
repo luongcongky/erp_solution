@@ -141,9 +141,7 @@ export class ItemRepository extends BaseRepository {
             if (filters.itemCategoryId) {
                 whereConditions += ` AND i.item_category_id = '${filters.itemCategoryId}'`;
             }
-            if (filters.abcClassification) {
-                whereConditions += ` AND i.abc_classification = '${filters.abcClassification}'`;
-            }
+
             if (filters.isActive !== undefined) {
                 whereConditions += ` AND i.is_active = ${filters.isActive}`;
             }
@@ -187,7 +185,7 @@ export class ItemRepository extends BaseRepository {
                     i.standard_cost as "standardCost",
                     i.default_selling_price as "defaultSellingPrice",
                     i.min_stock as "minStock", i.max_stock as "maxStock",
-                    i.abc_classification as "abcClassification",
+
                     i.created_at as "createdAt",
                     ig.name as "itemGroupName",
                     ic.name as "itemCategoryName",
